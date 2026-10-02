@@ -179,10 +179,10 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.022em
 .filmstrip {
   list-style: none; margin: 0; padding: 0 0 8px;
   display: grid; grid-auto-flow: column; grid-auto-columns: 84px;
-  gap: 10px; overflow-x: auto;
+  grid-template-rows: 126px; gap: 10px; overflow-x: auto;
 }
 .filmstrip img {
-  width: 84px; height: 84px; object-fit: cover;
+  width: 84px; height: 126px; object-fit: cover;
   border-radius: var(--radius-sm); border: 1px solid var(--rule);
   background: var(--sunk); display: block;
 }
@@ -236,19 +236,6 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.022em
 .meter { height: 6px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
 .meter > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease-out; }
 
-/* ------------------------------------------------------------ scoreboard */
-
-.scoreboard {
-  list-style: none; margin: 0 0 8px; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
-  border-radius: var(--radius); overflow: hidden;
-}
-.scoreboard li { background: var(--card); padding: 16px 18px; }
-.scoreboard .figure { font-size: 25px; font-weight: 680; letter-spacing: -.02em; line-height: 1.1; }
-.scoreboard .caption { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); font-weight: 620; margin-top: 3px; }
-.scoreboard li.is-bad .figure { color: var(--major); }
-
 /* ---------------------------------------------------------------- export */
 
 .export { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -263,7 +250,7 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.022em
 }
 @media (max-width: 880px) { .feature-body { grid-template-columns: 1fr; } }
 .feature-frame { position: relative; margin: 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--sunk); cursor: zoom-in; }
-.feature-frame img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.feature-frame img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
 .ribbon {
   position: absolute; top: 14px; left: 14px;
   background: rgba(28, 26, 23, .82); color: #fff;
@@ -341,8 +328,28 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.022em
 .frame.has-fault { border-color: #eccfca; }
 
 .frame-img { position: relative; margin: 0; background: var(--sunk); cursor: zoom-in; border: 0; padding: 0; display: block; width: 100%; }
-.frame-img img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
-.gallery-wide .frame-img img { aspect-ratio: 3 / 2; }
+
+/* Every tile is portrait, whatever the photograph is.
+   `object-fit: cover` fills the frame, which means a landscape original is
+   cropped left and right - the sides are not shown here. The lightbox always
+   displays the whole frame with `contain`, so nothing is lost, only hidden in
+   the grid. A shape badge marks which tiles are cropped. */
+.frame-img img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
+.gallery-wide .frame-img img { aspect-ratio: 2 / 3; }
+
+/* Fit mode: same portrait tile, whole photograph visible inside it. Every
+   frame in this batch is 3:2 landscape, and cropping that to 2:3 hides 56% of
+   the width - too much to hide from someone judging the photograph. */
+.gallery.is-fit .frame-img img { object-fit: contain; background: var(--sunk); }
+
+.shape-tag {
+  position: absolute; bottom: 9px; right: 9px;
+  background: rgba(255, 255, 255, .92); color: var(--ink-soft);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; padding: 3px 7px; border-radius: 99px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.shape-tag.is-cropped { background: var(--minor-soft); color: var(--minor); }
 
 .pin {
   position: absolute; top: 9px; left: 9px;
@@ -386,32 +393,14 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.022em
 .ranking tbody tr:hover { background: var(--sunk); }
 .ranking .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .ranking .frame-cell { display: flex; align-items: center; gap: 11px; }
-.ranking .frame-cell img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); cursor: zoom-in; }
+.ranking .frame-cell img { width: 40px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); cursor: zoom-in; }
 .ranking .frame-cell .fn { font-family: var(--mono); font-size: 12px; }
 .ranking tr.is-select { background: #fdf7f3; }
 .ranking tr.is-select:hover { background: #fbf0e9; }
 
-/* ---------------------------------------------------------------- bursts */
-
-.bursts { display: grid; gap: 14px; }
-.burst { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px 18px; }
-.burst-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
-.burst-title { font-size: 14px; font-weight: 640; margin: 0; }
-.burst-sub { font-size: 12px; color: var(--ink-faint); }
-.burst-strip { display: flex; flex-wrap: wrap; gap: 10px; }
-.burst-item { width: 104px; }
-.burst-item button {
-  border: 0; padding: 0; background: none; cursor: zoom-in; display: block; width: 100%;
-}
-.burst-item img {
-  width: 104px; height: 104px; object-fit: cover; display: block;
-  border-radius: var(--radius-sm); border: 1px solid var(--rule);
-}
-.burst-item.is-select img { border: 2px solid var(--accent); }
-.burst-item .cap { font: 11px/1.4 var(--mono); color: var(--ink-faint); margin-top: 5px; }
-.burst-item .cap.is-dup { color: var(--major); }
-
 /* -------------------------------------------------------------- lightbox */
+
+.side-note { font-size: 12px; color: var(--ink-faint); margin: 4px 0 0; }
 
 .lightbox { position: fixed; inset: 0; z-index: 90; background: rgba(22, 20, 18, .96); display: flex; flex-direction: column; }
 .lb-bar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.12); color: #f3efe9; }

@@ -23,6 +23,7 @@ const State = {
   result: null,
   filter: "all",
   view: "grid",
+  fit: "cover",            // "cover" crops wide frames, "contain" shows all
   lightboxOrder: [],
   lightboxAt: -1,
   poller: null
@@ -302,11 +303,20 @@ function watchProgress() {
 
 /* ----------------------------------------------------------- step three */
 
-function scoreboardItem(figure, caption, bad) {
-  const li = make("li", bad ? "is-bad" : null);
-  li.appendChild(make("div", "figure", figure));
-  li.appendChild(make("div", "caption", caption));
-  return li;
+/* Every tile is portrait, so a landscape original is cropped at the sides.
+   This marks which ones, and the title says so, because silently hiding part
+   of a photograph while asking someone to judge it would be misleading. */
+function shapeTag(photo) {
+  const cropped = photo.orientation === "landscape";
+  const tag = make("span", "shape-tag" + (cropped ? " is-cropped" : ""),
+    photo.orientation === "landscape" ? "Wide"
+      : photo.orientation === "portrait" ? "Tall"
+      : photo.orientation === "square" ? "Square" : "?");
+  tag.title = cropped
+    ? photo.dimensions + " landscape, shown cropped to portrait \u2014 " +
+      "open it to see the whole frame"
+    : photo.dimensions + " " + photo.orientation;
+  return tag;
 }
 
 function frameCard(photo, wide) {
@@ -328,6 +338,7 @@ function frameCard(photo, wide) {
   button.appendChild(pin);
   button.appendChild(make("span", "score-tab", photo.score));
   if (photo.pick) button.appendChild(make("span", "flag", "Select"));
+  button.appendChild(shapeTag(photo));
 
   button.addEventListener("click", () => openLightbox(photo.photo));
 
@@ -353,6 +364,7 @@ function paintFeature(photo, total) {
   img.alt = photo.name + ". " + (photo.headline || "");
   figure.appendChild(img);
   figure.appendChild(make("span", "ribbon", "Best of " + total));
+  figure.appendChild(shapeTag(photo));
   figure.addEventListener("click", () => openLightbox(photo.photo));
 
   const meta = make("div", "feature-meta");
@@ -363,7 +375,7 @@ function paintFeature(photo, total) {
       " for major faults"));
   }
   meta.appendChild(make("div", "filename", photo.name));
-  const extra = [photo.dimensions];
+  const extra = [photo.dimensions, photo.orientation];
   if (photo.faces > 0) {
     extra.push(photo.faces + (photo.faces === 1 ? " face" : " faces"));
   }
@@ -391,6 +403,7 @@ function paintCollection() {
 
   const grid = $("grid");
   grid.innerHTML = "";
+  grid.classList.toggle("is-fit", State.fit === "contain");
   shown.forEach((photo) => grid.appendChild(frameCard(photo, false)));
 
   const body = $("table-body");
@@ -468,69 +481,13 @@ function paintFaults(tally, total) {
   });
 }
 
-function paintBursts(groups) {
-  const wrap = $("bursts");
-  wrap.innerHTML = "";
-
-  groups.forEach((group) => {
-    const box = make("section", "burst");
-
-    const head = make("div", "burst-head");
-    head.appendChild(make("h3", "burst-title", "Shot " + group.index));
-    head.appendChild(make("span", "burst-sub",
-      group.size === 1 ? "one frame" : group.size + " frames"));
-    box.appendChild(head);
-
-    const strip = make("div", "burst-strip");
-    group.photos.forEach((photo) => {
-      const item = make("div", "burst-item" + (photo.pick ? " is-select" : ""));
-
-      const button = make("button");
-      button.type = "button";
-      button.setAttribute("aria-label", "Open " + photo.name + " larger");
-      const img = make("img");
-      img.src = thumbUrl(photo.photo, 220);
-      img.alt = photo.name;
-      img.loading = "lazy";
-      button.appendChild(img);
-      button.addEventListener("click", () => openLightbox(photo.photo));
-      item.appendChild(button);
-
-      let caption = "#" + photo.rank + "  " + photo.score;
-      if (photo.pick) caption += "  select";
-      const cap = make("div", "cap" + (photo.duplicate ? " is-dup" : ""), caption);
-      if (photo.duplicate) cap.title = "near-duplicate of " + photo.duplicate_of;
-      item.appendChild(cap);
-
-      strip.appendChild(item);
-    });
-
-    box.appendChild(strip);
-    wrap.appendChild(box);
-  });
-}
-
 function paintReview(result) {
   if (!result.ready) return;
   State.result = result;
 
   const s = result.stats;
-  const board = $("scoreboard");
-  board.innerHTML = "";
-  board.appendChild(scoreboardItem(s.analyzed, "frames"));
-  board.appendChild(scoreboardItem(s.shots, "distinct shots"));
-  board.appendChild(scoreboardItem(s.picked, "selects"));
-  board.appendChild(scoreboardItem(s.usable, "clean"));
-  if (s.flawed) board.appendChild(scoreboardItem(s.flawed, "with faults", true));
-  if (s.duplicates) board.appendChild(scoreboardItem(s.duplicates, "duplicates"));
-
-  $("review-summary").textContent = result.summary;
 
   if (result.best) paintFeature(result.best, s.analyzed);
-
-  const selects = $("selects");
-  selects.innerHTML = "";
-  result.picks.forEach((photo) => selects.appendChild(frameCard(photo, true)));
 
   State.filter = "all";
   document.querySelectorAll("[data-filter]").forEach((b) => {
@@ -541,14 +498,20 @@ function paintReview(result) {
   paintCollection();
 
   paintFaults(result.issue_tally, s.analyzed);
-  $("faults-note").textContent = result.faces_probed
+
+  const shapes = Object.entries(result.shape_tally || {})
+    .map(([shape, n]) => n + " " + shape).join(", ");
+  const faceNote = result.faces_probed
     ? "Face checks ran: presence, size, lighting and focus. Closed eyes and " +
       "expressions are not detected \u2014 the model gives five landmarks " +
       "with no eyelid or mouth-shape data, so that verdict would be guesswork."
     : "Face checks did not run, so every fault here is about the photograph " +
       "rather than the people in it.";
-
-  paintBursts(result.groups);
+  $("faults-note").textContent = shapes
+    ? "Shapes in this batch: " + shapes +
+      ". Tiles are shown portrait, so wide frames are cropped at the sides " +
+      "in the grid \u2014 open one to see all of it. " + faceNote
+    : faceNote;
 
   const bad = $("unreadable");
   if (result.failures.length) {
@@ -600,7 +563,7 @@ async function showLightbox(name) {
 
   side.appendChild(scoreLine(detail));
   if (detail.penalty > 0) {
-    side.appendChild(make("p", "burst-sub",
+    side.appendChild(make("p", "side-note",
       "measured " + detail.quality + ", less " + detail.penalty +
       " for major faults"));
   }
@@ -722,6 +685,18 @@ document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => {
     State.view = button.dataset.view;
     document.querySelectorAll("[data-view]").forEach((other) => {
+      const on = other === button;
+      other.classList.toggle("is-on", on);
+      other.setAttribute("aria-pressed", String(on));
+    });
+    paintCollection();
+  });
+});
+
+document.querySelectorAll("[data-fit]").forEach((button) => {
+  button.addEventListener("click", () => {
+    State.fit = button.dataset.fit;
+    document.querySelectorAll("[data-fit]").forEach((other) => {
       const on = other === button;
       other.classList.toggle("is-on", on);
       other.setAttribute("aria-pressed", String(on));

@@ -136,32 +136,16 @@
     <div class="panel-head row-between">
       <div>
         <h1>Review</h1>
-        <p class="lede" id="review-summary"></p>
       </div>
       <div class="export">
-        <a class="btn btn-primary" href="/api/export.zip">Download selects</a>
         <a class="btn btn-quiet" href="/api/export.csv">Ranking CSV</a>
       </div>
     </div>
-
-    <ul class="scoreboard" id="scoreboard"></ul>
 
     <!-- the single best frame -->
     <section class="feature" id="feature" aria-labelledby="feature-title">
       <h2 class="section-title" id="feature-title">Top frame</h2>
       <div class="feature-body" id="feature-body"></div>
-    </section>
-
-    <!-- selects -->
-    <section aria-labelledby="selects-title">
-      <div class="section-head">
-        <h2 class="section-title" id="selects-title">Selects</h2>
-        <p class="section-note">
-          One frame from each distinct shot, strongest first, so these are
-          different photographs rather than one pose repeated.
-        </p>
-      </div>
-      <div class="gallery gallery-wide" id="selects"></div>
     </section>
 
     <!-- everything -->
@@ -181,6 +165,12 @@
           <div class="segmented" role="group" aria-label="Layout">
             <button type="button" class="seg is-on" data-view="grid" aria-pressed="true">Grid</button>
             <button type="button" class="seg" data-view="table" aria-pressed="false">Table</button>
+          </div>
+          <div class="segmented" role="group" aria-label="How wide frames fit the portrait tile">
+            <button type="button" class="seg is-on" data-fit="cover" aria-pressed="true"
+                    title="Fill the portrait tile. Wide frames are cropped at the sides.">Fill</button>
+            <button type="button" class="seg" data-fit="contain" aria-pressed="false"
+                    title="Show the whole frame inside the portrait tile.">Fit</button>
           </div>
         </div>
       </div>
@@ -212,17 +202,6 @@
         <p class="section-note" id="faults-note"></p>
       </div>
       <div class="faults" id="faults"></div>
-    </section>
-
-    <!-- bursts -->
-    <section aria-labelledby="bursts-title">
-      <div class="section-head">
-        <h2 class="section-title" id="bursts-title">Shots and their frames</h2>
-        <p class="section-note">
-          Frames that look alike are bundled. One is chosen from each bundle.
-        </p>
-      </div>
-      <div class="bursts" id="bursts"></div>
     </section>
 
     <div id="unreadable" class="alert alert-bad" hidden></div>

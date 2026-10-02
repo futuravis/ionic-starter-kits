@@ -216,7 +216,23 @@ def _photo_payload(candidate: shortlist.Candidate) -> dict:
         ],
         "dimensions": (f"{candidate.width}x{candidate.height}"
                        if candidate.width else ""),
+        "orientation": candidate.orientation,
+        "aspect": round(candidate.aspect, 3),
     }
+
+
+def _shape_tally() -> Dict[str, int]:
+    """How many photos are portrait, landscape or square."""
+    with SESSION.lock:
+        result = SESSION.result
+
+    if result is None:
+        return {}
+
+    counts: Dict[str, int] = {}
+    for candidate in result.ranked:
+        counts[candidate.orientation] = counts.get(candidate.orientation, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: -kv[1]))
 
 
 def _result_payload() -> dict:
@@ -244,6 +260,9 @@ def _result_payload() -> dict:
             "unreadable": len(result.failures),
         },
         "issue_tally": result.issue_tally,
+        # How the batch breaks down by shape, so a mix of portrait and
+        # landscape is visible before every tile gets cropped to one shape.
+        "shape_tally": _shape_tally(),
         "best": _photo_payload(best) if best else None,
         "picks": [_photo_payload(c) for c in result.picks],
         # The whole batch, best to worst. This is the 1-to-N ordering.

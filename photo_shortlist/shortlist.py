@@ -134,6 +134,33 @@ class Candidate:
         return round(self.score * 100, 1)
 
     @property
+    def aspect(self) -> float:
+        """Width divided by height. 0.0 when the size is unknown."""
+        if not self.width or not self.height:
+            return 0.0
+        return self.width / self.height
+
+    @property
+    def orientation(self) -> str:
+        """
+        "portrait", "landscape" or "square".
+
+        Measured on the analysis-sized copy, which keeps the original
+        proportions, so the answer matches the file on disk.
+
+        The 2% dead band around 1.0 stops a 3000x2999 frame being called
+        landscape on a one-pixel difference.
+        """
+        ratio = self.aspect
+        if ratio == 0.0:
+            return "unknown"
+        if ratio > 1.02:
+            return "landscape"
+        if ratio < 0.98:
+            return "portrait"
+        return "square"
+
+    @property
     def quality_percent(self) -> float:
         return round(self.quality * 100, 1)
 
