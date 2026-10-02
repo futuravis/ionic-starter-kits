@@ -28,4 +28,6 @@ crafted URL cannot read arbitrary files. Do not expose this on a shared
 network.
 """
 
-__version__ = "1.0.0"
+# Repository release version. The three packages here ship together as one
+# artifact, so they carry one number rather than drifting apart.
+__version__ = "0.01"

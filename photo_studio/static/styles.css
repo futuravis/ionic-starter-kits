@@ -57,6 +57,14 @@ body {
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* The browser hides [hidden] elements with `display: none` from its own
+   stylesheet, and ANY author `display` rule outranks it. Several things here
+   set one - .lightbox is display:flex, .gallery is display:grid - so without
+   this the hidden attribute silently does nothing and the lightbox sits open
+   over the whole page on load. !important because the rules it has to beat
+   are plain class selectors that would otherwise win on specificity. */
+[hidden] { display: none !important; }
+
 /* ---------------------------------------------------------------- topbar */
 
 .topbar {

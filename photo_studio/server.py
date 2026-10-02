@@ -199,8 +199,16 @@ class Handler(BaseHTTPRequestHandler):
         extension = os.path.splitext(target)[1].lower()
         try:
             with open(target, "rb") as fh:
-                self._send(fh.read(),
-                           CONTENT_TYPES.get(extension, "application/octet-stream"))
+                self._send(
+                    fh.read(),
+                    CONTENT_TYPES.get(extension, "application/octet-stream"),
+                    # Explicitly uncached. Without this the browser caches the
+                    # CSS and JS heuristically, so editing a stylesheet appears
+                    # to do nothing and the next person debugs the wrong file.
+                    # These are local reads of a few KB; there is nothing to
+                    # save by caching them.
+                    cache="no-store, must-revalidate",
+                )
         except OSError:
             self._error("could not read file", 500)
 

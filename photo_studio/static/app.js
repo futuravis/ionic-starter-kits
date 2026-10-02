@@ -176,6 +176,29 @@ async function loadSettings() {
   }
 
   paintTray(settings.uploaded, settings.names);
+
+  // A finished analysis outlives the page. Without this, reloading the browser
+  // drops you back on step one with Review greyed out while the result is
+  // still sitting on the server, and the only way back is to analyse again.
+  if (settings.ready) {
+    try {
+      paintReview(await api("/api/result"));
+      notify("Showing the analysis already in progress on this machine.");
+    } catch (err) {
+      // Not fatal: the batch is still there to be analysed again.
+      notify(err.message, "bad");
+    }
+  }
+
+  // Likewise if an analysis is running when the page opens: pick the progress
+  // back up rather than showing an idle screen.
+  const progress = await api("/api/progress");
+  if (progress.running) {
+    goTo("analyse");
+    $("progress").hidden = false;
+    $("run").disabled = true;
+    watchProgress();
+  }
 }
 
 function paintTray(count, names) {
