@@ -1,21 +1,44 @@
-# wedding_album package
+# Wedding Album + Photo Shortlist
 #
-# Runs fully offline on the CPU. Face recognition uses OpenCV's built-in DNN
-# engine with ONNX weights fetched once by:
+# Both applications run fully offline on the CPU. Face recognition uses
+# OpenCV's built-in DNN engine with ONNX weights fetched once by:
 #
 #     python3 -m wedding_album download-models
 #
 # No API key, no cloud service, no per-image cost.
+#
+# ---------------------------------------------------------------------------
+# Install
+# ---------------------------------------------------------------------------
+#     python3 -m venv .venv
+#     source .venv/bin/activate
+#     pip install -r requirements.txt
+#
+# ---------------------------------------------------------------------------
+# On the pinning
+# ---------------------------------------------------------------------------
+# Exact versions, not ranges. These applications exist to score photographs,
+# and the scores are relative to the batch: a different OpenCV could change
+# which photo is called best without anything appearing to break. Two people
+# running the same batch must get the same shortlist, so the versions are
+# fixed to the ones actually verified working here.
+#
+# Verified on: macOS 26.6.2, Python 3.9.6, 14 cores.
 
-# FaceDetectorYN / FaceRecognizerSF need >=4.8. Verified working on 5.0.0,
-# which is what this machine has. Not pinned to 4.10: OpenCV 5 dropped the
-# bundled Haar cascades and the package deliberately avoids them.
-opencv-python>=4.8
+# FaceDetectorYN / FaceRecognizerSF need >= 4.8. OpenCV 5 dropped the bundled
+# Haar cascades, which is why the packages deliberately avoid them and use the
+# ONNX models instead.
+#
+# Note the four-part version. `cv2.__version__` reports "5.0.0", but the
+# distribution on PyPI is 5.0.0.93 - pinning the three-part string fails to
+# resolve.
+opencv-python==5.0.0.93
 
-numpy>=1.24.0
+numpy==2.0.2
 
 # --- only used by the legacy standalone image_curator.py -------------------
-# That script predates this package, scores on technical quality alone, and its
-# Haar-cascade face step is broken on OpenCV 5. Kept for reference only.
-Pillow>=10.0.0
-ImageHash>=4.3.1
+# That script predates both packages, scores on technical quality alone, and
+# its Haar-cascade face step is broken on OpenCV 5. Kept for reference only;
+# nothing in wedding_album or photo_shortlist imports it.
+Pillow==11.3.0
+ImageHash==4.3.2
