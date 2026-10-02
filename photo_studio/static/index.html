@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Studio &mdash; review a shoot</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <span class="brand-name">Photo Studio</span>
+    </div>
+    <nav class="steps" aria-label="Progress">
+      <button type="button" class="step is-current" data-goto="add" aria-current="step">
+        <span class="step-n">1</span> Add
+      </button>
+      <button type="button" class="step" data-goto="analyse">
+        <span class="step-n">2</span> Analyse
+      </button>
+      <button type="button" class="step" data-goto="review" disabled>
+        <span class="step-n">3</span> Review
+      </button>
+    </nav>
+    <div class="topbar-right">
+      <span class="local-badge" title="Nothing is uploaded anywhere. All processing happens on this machine.">
+        Runs locally
+      </span>
+    </div>
+  </div>
+</header>
+
+<div id="alert" class="alert shell" hidden role="status" aria-live="polite"></div>
+
+<main class="shell">
+
+  <!-- ======================= STEP 1 : ADD ======================= -->
+  <section id="panel-add" class="panel">
+    <div class="panel-head">
+      <h1>Add the shoot</h1>
+      <p class="lede">
+        Drop in a batch and every frame gets a rank, a score and a list of what
+        is wrong with it. Nothing leaves this machine.
+      </p>
+    </div>
+
+    <div id="dropzone" class="dropzone" role="button" tabindex="0"
+         aria-label="Choose photos, or drag and drop them here">
+      <svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 15v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" fill="none"
+              stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <p class="drop-main">Drag photos here, or click to browse</p>
+      <p class="drop-sub" id="drop-formats"></p>
+    </div>
+    <input type="file" id="file-input" multiple accept="image/*" hidden>
+
+    <div id="tray" class="tray" hidden>
+      <div class="tray-head">
+        <h2 id="tray-count">0 photos</h2>
+        <div class="tray-actions">
+          <button type="button" id="clear-all" class="btn btn-quiet">Clear all</button>
+          <button type="button" id="to-analyse" class="btn btn-primary">Continue</button>
+        </div>
+      </div>
+      <ul class="filmstrip" id="filmstrip"></ul>
+    </div>
+  </section>
+
+  <!-- ===================== STEP 2 : ANALYSE ==================== -->
+  <section id="panel-analyse" class="panel" hidden>
+    <div class="panel-head">
+      <h1>Analyse</h1>
+      <p class="lede">
+        Each photo is measured for sharpness, exposure, contrast, colour and
+        noise, then compared against the rest of the batch.
+      </p>
+    </div>
+
+    <div class="options">
+      <div class="option">
+        <label for="want-input">Selects to choose</label>
+        <div class="stepper">
+          <button type="button" class="nudge" data-nudge="-1" aria-label="Fewer selects">&minus;</button>
+          <input type="number" id="want-input" value="6" min="1" max="20"
+                 aria-label="Number of selects">
+          <button type="button" class="nudge" data-nudge="1" aria-label="More selects">+</button>
+        </div>
+        <p class="hint">Spread across different shots, not just the top scores.</p>
+      </div>
+
+      <div class="option">
+        <label class="switch">
+          <input type="checkbox" id="opt-dupes" checked>
+          <span class="track" aria-hidden="true"></span>
+          <span class="switch-text">Skip near-identical frames</span>
+        </label>
+        <p class="hint">Stops a burst of one pose filling the selects.</p>
+
+        <label class="switch">
+          <input type="checkbox" id="opt-faces" checked>
+          <span class="track" aria-hidden="true"></span>
+          <span class="switch-text">Check faces</span>
+        </label>
+        <p class="hint" id="faces-hint">
+          Whether anyone is in frame, lit, and in focus. Closed eyes and
+          expressions are not detected.
+        </p>
+      </div>
+
+      <div class="option option-go">
+        <button type="button" id="run" class="btn btn-primary btn-big">
+          Analyse the batch
+        </button>
+        <p class="hint" id="run-hint"></p>
+      </div>
+    </div>
+
+    <div id="progress" class="progress" hidden>
+      <div class="progress-row">
+        <span id="progress-stage">Working</span>
+        <span id="progress-count" class="mono"></span>
+      </div>
+      <div class="meter"><span id="progress-fill"></span></div>
+    </div>
+  </section>
+
+  <!-- ====================== STEP 3 : REVIEW ==================== -->
+  <section id="panel-review" class="panel" hidden>
+
+    <div class="panel-head row-between">
+      <div>
+        <h1>Review</h1>
+        <p class="lede" id="review-summary"></p>
+      </div>
+      <div class="export">
+        <a class="btn btn-primary" href="/api/export.zip">Download selects</a>
+        <a class="btn btn-quiet" href="/api/export.csv">Ranking CSV</a>
+      </div>
+    </div>
+
+    <ul class="scoreboard" id="scoreboard"></ul>
+
+    <!-- the single best frame -->
+    <section class="feature" id="feature" aria-labelledby="feature-title">
+      <h2 class="section-title" id="feature-title">Top frame</h2>
+      <div class="feature-body" id="feature-body"></div>
+    </section>
+
+    <!-- selects -->
+    <section aria-labelledby="selects-title">
+      <div class="section-head">
+        <h2 class="section-title" id="selects-title">Selects</h2>
+        <p class="section-note">
+          One frame from each distinct shot, strongest first, so these are
+          different photographs rather than one pose repeated.
+        </p>
+      </div>
+      <div class="gallery gallery-wide" id="selects"></div>
+    </section>
+
+    <!-- everything -->
+    <section aria-labelledby="all-title">
+      <div class="section-head row-between">
+        <div>
+          <h2 class="section-title" id="all-title">Every frame, best to worst</h2>
+          <p class="section-note" id="all-note"></p>
+        </div>
+        <div class="toolbar">
+          <div class="segmented" role="group" aria-label="Filter">
+            <button type="button" class="seg is-on" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" class="seg" data-filter="clean" aria-pressed="false">Clean</button>
+            <button type="button" class="seg" data-filter="flawed" aria-pressed="false">Faults</button>
+            <button type="button" class="seg" data-filter="selects" aria-pressed="false">Selects</button>
+          </div>
+          <div class="segmented" role="group" aria-label="Layout">
+            <button type="button" class="seg is-on" data-view="grid" aria-pressed="true">Grid</button>
+            <button type="button" class="seg" data-view="table" aria-pressed="false">Table</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery" id="grid"></div>
+
+      <div class="table-wrap" id="table-wrap" hidden>
+        <table class="ranking">
+          <caption class="sr-only">Every frame ranked best to worst</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="num">#</th>
+              <th scope="col">Frame</th>
+              <th scope="col" class="num">Score</th>
+              <th scope="col" class="num">Shot</th>
+              <th scope="col" class="num">Faces</th>
+              <th scope="col">Condition</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- faults across the batch -->
+    <section aria-labelledby="faults-title">
+      <div class="section-head">
+        <h2 class="section-title" id="faults-title">Faults across the batch</h2>
+        <p class="section-note" id="faults-note"></p>
+      </div>
+      <div class="faults" id="faults"></div>
+    </section>
+
+    <!-- bursts -->
+    <section aria-labelledby="bursts-title">
+      <div class="section-head">
+        <h2 class="section-title" id="bursts-title">Shots and their frames</h2>
+        <p class="section-note">
+          Frames that look alike are bundled. One is chosen from each bundle.
+        </p>
+      </div>
+      <div class="bursts" id="bursts"></div>
+    </section>
+
+    <div id="unreadable" class="alert alert-bad" hidden></div>
+
+    <div class="restart">
+      <button type="button" id="start-over" class="btn btn-quiet">
+        Start a new batch
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer shell">
+  <p>
+    Every photo is scored against the others in the same batch, so
+    &ldquo;best&rdquo; means best of these. Scores are discounted where a major
+    fault is found.
+  </p>
+  <p class="footer-faint">
+    No photograph leaves this machine. No API key, no cloud service.
+  </p>
+</footer>
+
+<!-- lightbox -->
+<div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true"
+     aria-labelledby="lb-name">
+  <div class="lb-bar">
+    <div class="lb-id">
+      <span class="lb-rank mono" id="lb-rank"></span>
+      <span id="lb-name"></span>
+    </div>
+    <div class="lb-controls">
+      <button type="button" id="lb-prev" class="lb-btn" aria-label="Previous frame">&#8249;</button>
+      <button type="button" id="lb-next" class="lb-btn" aria-label="Next frame">&#8250;</button>
+      <button type="button" id="lb-close" class="lb-btn" aria-label="Close">&times;</button>
+    </div>
+  </div>
+  <div class="lb-body">
+    <figure class="lb-stage">
+      <img id="lb-img" alt="">
+    </figure>
+    <aside class="lb-side" id="lb-side"></aside>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

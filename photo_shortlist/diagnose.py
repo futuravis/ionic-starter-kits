@@ -49,9 +49,25 @@ FLAT_CONTRAST = 26.0            # standard deviation of intensity
 
 FACE_DARK_RATIO = 0.68          # face this much dimmer than frame = backlit
 FACE_DARK_ABSOLUTE = 95.0
-FACE_SOFT_RATIO = 0.50          # face this much softer than frame = missed focus
 FACE_TURNED = 0.45              # frontality below this = turned away
 FACE_TILTED = 26.0              # degrees of head tilt
+
+# "Focus missed the face" needs two things to agree, because either alone is
+# wrong.
+#
+# The frame ratio alone reports soft faces on sharp portraits: skin is smooth
+# and a wedding frame is full of detail, so a face measures softer than its
+# photograph whatever the focus did. On a real 40-photo shoot that fired on 8
+# of them.
+#
+# The batch percentile alone is just as bad in the other direction - it always
+# condemns the softest quarter of faces, even when every face in the batch is
+# perfectly sharp.
+#
+# Requiring both means a face must be soft compared to other faces *and* soft
+# compared to its own frame.
+FACE_SOFT_RATIO = 0.35
+FACE_SOFT_PERCENTILE = 25.0
 
 # Batch percentiles for the comparative faults.
 SOFT_PERCENTILE = 22.0
@@ -97,9 +113,14 @@ class Thresholds:
     slightly_soft: float = 0.0
     grainy: float = 0.0
     noise_median: float = 0.0
+    face_soft: float = 0.0
 
     @classmethod
-    def from_batch(cls, metrics: Sequence[PhotoMetrics]) -> "Thresholds":
+    def from_batch(
+        cls,
+        metrics: Sequence[PhotoMetrics],
+        readings: Optional[Sequence[FaceReading]] = None,
+    ) -> "Thresholds":
         usable = [m for m in metrics if m.ok]
         if len(usable) < 4:
             # Too few photos for percentiles to mean anything. Zeroed cut-offs
@@ -110,11 +131,28 @@ class Thresholds:
         sharpness = np.asarray([m.sharpness for m in usable], dtype=np.float64)
         noise = np.asarray([m.noise for m in usable], dtype=np.float64)
 
+        # Faces are compared against other faces, never against whole frames.
+        # Skin is smooth and a wedding frame is full of detail - jewellery,
+        # embroidery, flowers - so a face always measures softer than the
+        # photograph containing it, whatever the focus did. Judging a face
+        # against the frame therefore reports "focus missed" on perfectly
+        # sharp portraits.
+        face_soft = 0.0
+        if readings:
+            face_sharpness = [
+                r.main.sharpness for r in readings
+                if r.ok and r.main and r.main.sharpness > 0
+            ]
+            if len(face_sharpness) >= 4:
+                face_soft = float(np.percentile(face_sharpness,
+                                                FACE_SOFT_PERCENTILE))
+
         return cls(
             soft=float(np.percentile(sharpness, SOFT_PERCENTILE)),
             slightly_soft=float(np.percentile(sharpness, SLIGHTLY_SOFT_PERCENTILE)),
             grainy=float(np.percentile(noise, GRAINY_PERCENTILE)),
             noise_median=float(np.median(noise)),
+            face_soft=face_soft,
         )
 
 
@@ -197,7 +235,8 @@ def _focus_and_noise_issues(m: PhotoMetrics, t: Thresholds) -> List[Issue]:
     return issues
 
 
-def _face_issues(reading: Optional[FaceReading]) -> List[Issue]:
+def _face_issues(reading: Optional[FaceReading],
+                 thresholds: "Thresholds") -> List[Issue]:
     """
     Faults about the people in the photograph.
 
@@ -241,13 +280,20 @@ def _face_issues(reading: Optional[FaceReading]) -> List[Issue]:
             f"which suggests backlighting",
         ))
 
-    # Focus landing behind the subject: sharp background, soft faces.
-    if (reading.frame_sharpness > 0
-            and main.sharpness < reading.frame_sharpness * FACE_SOFT_RATIO):
+    # Focus landing behind the subject: sharp background, soft faces. Both
+    # comparisons must agree - see the note on FACE_SOFT_RATIO.
+    softer_than_frame = (
+        reading.frame_sharpness > 0
+        and main.sharpness < reading.frame_sharpness * FACE_SOFT_RATIO
+    )
+    softer_than_other_faces = (
+        thresholds.face_soft > 0 and main.sharpness <= thresholds.face_soft
+    )
+    if softer_than_frame and softer_than_other_faces:
         issues.append(Issue(
             "face_soft", "Face not in focus", "major",
-            "the frame is sharper than the face, so the focus "
-            "has landed behind the subject",
+            "softer than the other faces in this batch and softer than its "
+            "own frame, so the focus has landed behind the subject",
         ))
 
     if main.frontality < FACE_TURNED:
@@ -284,7 +330,7 @@ def diagnose(
     issues = (
         _exposure_issues(m)
         + _focus_and_noise_issues(m, thresholds)
-        + _face_issues(reading)
+        + _face_issues(reading, thresholds)
     )
 
     issues.sort(key=lambda i: SEVERITY_ORDER.get(i.severity, 9))

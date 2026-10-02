@@ -189,6 +189,8 @@ def _photo_payload(candidate: shortlist.Candidate) -> dict:
         "photo": os.path.basename(candidate.filepath),
         "name": candidate.name,
         "score": candidate.percent,
+        "quality": candidate.quality_percent,
+        "penalty": candidate.penalty_percent,
         "rank": candidate.rank,
         "group": candidate.group,
         "group_size": candidate.group_size,

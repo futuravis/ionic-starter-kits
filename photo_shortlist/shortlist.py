@@ -90,7 +90,15 @@ class Candidate:
     """One photograph, measured, placed, ranked and diagnosed."""
 
     filepath: str
+
+    # The score the ranking uses: photographic quality, discounted for major
+    # faults.
     score: float = 0.0
+
+    # Photographic quality before any fault discount. Kept so the UI can show
+    # "measured well, but the focus missed the face" rather than hiding the
+    # difference behind one number.
+    quality: float = 0.0
 
     # Position in the full ranking, 1 = best. Every photo has one.
     rank: int = 0
@@ -124,6 +132,15 @@ class Candidate:
     @property
     def percent(self) -> float:
         return round(self.score * 100, 1)
+
+    @property
+    def quality_percent(self) -> float:
+        return round(self.quality * 100, 1)
+
+    @property
+    def penalty_percent(self) -> float:
+        """How much the major faults cost this photo, in score points."""
+        return round((self.quality - self.score) * 100, 1)
 
     @property
     def major_issues(self) -> List[Issue]:
@@ -218,6 +235,35 @@ def _scale_for_display(values: Sequence[float], inverted: bool) -> List[float]:
         scaled = 1.0 - scaled
 
     return [float(v) for v in scaled]
+
+
+# What each major fault costs. Multiplicative, so two faults compound rather
+# than add up to a fixed floor.
+#
+# This exists because of what the first real-photo run produced: rank 1 was a
+# frame where the focus had missed the subject's face, and rank 2 was clean and
+# sharp. The five measured metrics say nothing about whether the focus landed
+# on a person, so a photograph can measure well and still be unusable.
+#
+# The weight is set so a single major fault costs about a fifth of the score -
+# enough to drop a flawed frame below a clean one of similar quality, not
+# enough to bury it beneath genuinely worse photographs.
+MAJOR_FAULT_PENALTY = 0.80
+
+
+def _penalized(quality_score: float, issues: Sequence[Issue]) -> float:
+    """
+    Discount a photo's score for each major fault.
+
+    Minor faults cost nothing. They are compromises worth knowing about - a
+    tilted head, nobody in frame, a little grain - not reasons to demote a
+    photograph.
+    """
+    penalty = 1.0
+    for issue in issues:
+        if issue.is_major:
+            penalty *= MAJOR_FAULT_PENALTY
+    return quality_score * penalty
 
 
 def score(measured: Sequence[PhotoMetrics]) -> Dict[str, float]:
@@ -439,17 +485,19 @@ def run(
 
     scores = score(measured)
     breakdowns = _breakdowns(usable)
-    thresholds = Thresholds.from_batch(usable)
+    thresholds = Thresholds.from_batch(usable, list(readings.values()))
 
     candidates: List[Candidate] = []
     for i, m in enumerate(usable):
         reading = readings.get(m.filepath)
         issues = diagnose.diagnose(m, reading, thresholds)
         face_count = reading.count if reading and reading.ok else -1
+        measured_score = scores.get(m.filepath, 0.0)
 
         candidates.append(Candidate(
             filepath=m.filepath,
-            score=scores.get(m.filepath, 0.0),
+            quality=measured_score,
+            score=_penalized(measured_score, issues),
             breakdown=breakdowns[i],
             issues=issues,
             headline=diagnose.headline(issues, face_count),
