@@ -82,6 +82,8 @@
       </p>
     </div>
 
+    <div id="straighten-report" class="turn-report" hidden></div>
+
     <div class="options">
       <div class="option">
         <label for="want-input">Selects to choose</label>
@@ -110,6 +112,22 @@
         <p class="hint" id="faces-hint">
           Whether anyone is in frame, lit, and in focus. Closed eyes and
           expressions are not detected.
+        </p>
+      </div>
+
+      <div class="option">
+        <label for="drop-input">Remove the weakest frames</label>
+        <div class="stepper">
+          <button type="button" class="nudge" data-drop="-1" aria-label="Remove fewer">&minus;</button>
+          <input type="number" id="drop-input" value="0" min="0"
+                 aria-label="How many of the weakest frames to remove">
+          <button type="button" class="nudge" data-drop="1" aria-label="Remove more">+</button>
+        </div>
+        <p class="hint">
+          Set aside before anything is ranked or chosen, so a weak frame cannot
+          influence which of its neighbours gets picked. They stay on disk and
+          are listed on the review page &mdash; nothing is deleted. 0 keeps
+          everything.
         </p>
       </div>
 
@@ -202,6 +220,15 @@
         <p class="section-note" id="faults-note"></p>
       </div>
       <div class="faults" id="faults"></div>
+    </section>
+
+    <!-- what was set aside -->
+    <section id="dropped-section" aria-labelledby="dropped-title" hidden>
+      <div class="section-head">
+        <h2 class="section-title" id="dropped-title">Set aside as weakest</h2>
+        <p class="section-note" id="dropped-note"></p>
+      </div>
+      <div class="gallery is-fit" id="dropped"></div>
     </section>
 
     <div id="unreadable" class="alert alert-bad" hidden></div>

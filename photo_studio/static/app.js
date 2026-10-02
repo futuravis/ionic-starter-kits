@@ -207,6 +207,12 @@ function paintTray(count, names) {
   $("run").disabled = count === 0;
   $("tray-count").textContent = count === 1 ? "1 photo" : count + " photos";
 
+  // At least one frame has to survive, so the cap is one below the batch size.
+  // Clamp the current value too, in case the batch shrank after it was set.
+  const drop = $("drop-input");
+  drop.max = String(Math.max(0, count - 1));
+  if (Number(drop.value) > Number(drop.max)) drop.value = drop.max;
+
   const strip = $("filmstrip");
   strip.innerHTML = "";
   (names || []).forEach((name) => {
@@ -261,7 +267,8 @@ async function runAnalysis() {
       body: JSON.stringify({
         want: parseInt($("want-input").value, 10),
         skip_duplicates: $("opt-dupes").checked,
-        use_faces: $("opt-faces").checked
+        use_faces: $("opt-faces").checked,
+        drop_worst: parseInt($("drop-input").value, 10) || 0
       })
     });
     watchProgress();
@@ -447,6 +454,30 @@ function tableRow(photo) {
   return tr;
 }
 
+/* Removal is shown, not silent. Setting frames aside without saying which ones
+   would leave no way to tell a sensible cut from a mistake, and these files are
+   still on disk. Shown in Fit mode so the whole frame is visible - you cannot
+   check a decision against a crop. */
+function paintDropped(dropped, considered) {
+  const section = $("dropped-section");
+
+  if (!dropped.length) {
+    section.hidden = true;
+    return;
+  }
+
+  $("dropped-note").textContent =
+    dropped.length + " of " + considered + " frames were set aside as the " +
+    "weakest, worst first. They are excluded from the ranking and the " +
+    "selects, and are still on disk \u2014 nothing was deleted.";
+
+  const wrap = $("dropped");
+  wrap.innerHTML = "";
+  dropped.forEach((photo) => wrap.appendChild(frameCard(photo, false)));
+
+  section.hidden = false;
+}
+
 function paintFaults(tally, total) {
   const wrap = $("faults");
   wrap.innerHTML = "";
@@ -496,6 +527,8 @@ function paintReview(result) {
     b.setAttribute("aria-pressed", String(on));
   });
   paintCollection();
+
+  paintDropped(result.dropped || [], result.considered || s.analyzed);
 
   paintFaults(result.issue_tally, s.analyzed);
 
@@ -652,15 +685,105 @@ $("file-input").addEventListener("change", (event) => {
   event.target.value = "";          // so the same file can be added again
 });
 
-$("to-analyse").addEventListener("click", () => goTo("analyse"));
+/* Continue stands every frame upright before moving on.
+   These files carry no usable EXIF orientation - every one reads "normal",
+   including the ones that are plainly sideways - so the rotation has to be
+   measured from the photograph rather than read from metadata. Only whole
+   quarter turns are applied: nothing is cropped, stretched or resampled. */
+async function straightenThenContinue() {
+  const button = $("to-analyse");
+  button.disabled = true;
+  button.textContent = "Checking orientation\u2026";
+  notify("Standing photos upright\u2026");
+
+  try {
+    await api("/api/straighten", { method: "POST" });
+    await waitForIdle();
+
+    const settings = await api("/api/settings");
+    paintTray(settings.uploaded, settings.names);
+    reportStraighten(settings.straightened);
+    goTo("analyse");
+  } catch (err) {
+    notify(err.message, "bad");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Continue";
+  }
+}
+
+/* Poll until the background job finishes, surfacing its stage as it goes. */
+function waitForIdle() {
+  return new Promise((resolve) => {
+    const timer = setInterval(async () => {
+      let p;
+      try { p = await api("/api/progress"); } catch (e) { return; }
+
+      if (p.stage) {
+        const count = p.total ? "  " + p.current + " / " + p.total : "";
+        notify(p.stage.charAt(0).toUpperCase() + p.stage.slice(1) + count);
+      }
+      if (p.running) return;
+
+      clearInterval(timer);
+      if (p.error) notify(p.error, "bad");
+      else if (p.message) notify(p.message, "good");
+      resolve();
+    }, 300);
+  });
+}
+
+function reportStraighten(report) {
+  const box = $("straighten-report");
+  if (!box) return;
+
+  if (!report || !report.ran || !report.rotated) {
+    box.hidden = true;
+    return;
+  }
+
+  box.innerHTML = "";
+  box.appendChild(make("p", "section-note",
+    "Rotated " + report.rotated + " of " + report.total +
+    " photos upright. Only whole quarter turns were applied \u2014 nothing " +
+    "was cropped or stretched. Your original files are untouched; this " +
+    "applies to the uploaded copies."));
+
+  const list = make("ul", "turn-list");
+  report.photos.forEach((photo) => {
+    const li = make("li");
+    if (photo.error) {
+      li.appendChild(make("span", "turn-angle bad", "failed"));
+      li.appendChild(make("span", "turn-name", photo.name + " \u2014 " + photo.error));
+    } else {
+      li.appendChild(make("span", "turn-angle", photo.angle + "\u00b0"));
+      li.appendChild(make("span", "turn-name",
+        photo.name + "   " + photo.before + " \u2192 " + photo.after));
+    }
+    list.appendChild(li);
+  });
+  box.appendChild(list);
+  box.hidden = false;
+}
+
+$("to-analyse").addEventListener("click", straightenThenContinue);
 $("run").addEventListener("click", runAnalysis);
 
-document.querySelectorAll(".nudge").forEach((button) => {
-  button.addEventListener("click", () => {
-    const input = $("want-input");
-    const next = parseInt(input.value, 10) + parseInt(button.dataset.nudge, 10);
-    input.value = Math.max(Number(input.min), Math.min(Number(input.max), next));
-  });
+function stepNumber(input, by) {
+  const next = (parseInt(input.value, 10) || 0) + by;
+  const low = Number(input.min);
+  const high = input.max === "" ? Infinity : Number(input.max);
+  input.value = Math.max(low, Math.min(high, next));
+}
+
+document.querySelectorAll("[data-nudge]").forEach((button) => {
+  button.addEventListener("click", () =>
+    stepNumber($("want-input"), parseInt(button.dataset.nudge, 10)));
+});
+
+document.querySelectorAll("[data-drop]").forEach((button) => {
+  button.addEventListener("click", () =>
+    stepNumber($("drop-input"), parseInt(button.dataset.drop, 10)));
 });
 
 document.querySelectorAll(".step").forEach((button) => {

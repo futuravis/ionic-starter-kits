@@ -199,16 +199,26 @@ class Group:
 class Result:
     """Everything one run produced."""
 
-    ranked: List[Candidate] = field(default_factory=list)   # all, best to worst
+    ranked: List[Candidate] = field(default_factory=list)   # kept, best to worst
     picks: List[Candidate] = field(default_factory=list)    # the shortlist
     groups: List[Group] = field(default_factory=list)
     failures: List[PhotoMetrics] = field(default_factory=list)
     issue_tally: Dict[str, int] = field(default_factory=dict)
     faces_probed: bool = False
 
+    # Frames set aside as the weakest of the batch, worst first. Still on disk
+    # and still measured - excluded from the review, not deleted. Nothing in
+    # this application removes a photograph from the filesystem.
+    dropped: List[Candidate] = field(default_factory=list)
+
     @property
     def total(self) -> int:
         return len(self.ranked)
+
+    @property
+    def considered(self) -> int:
+        """Everything measured, including what was set aside."""
+        return len(self.ranked) + len(self.dropped)
 
     @property
     def best(self) -> Optional[Candidate]:
@@ -225,6 +235,8 @@ class Result:
             f"{len(self.groups)} distinct shot(s)",
             f"{len(self.picks)} shortlisted",
         ]
+        if self.dropped:
+            parts.append(f"{len(self.dropped)} weakest set aside")
         flawed = self.total - self.usable_count
         if flawed:
             parts.append(f"{flawed} with a major fault")
@@ -480,6 +492,7 @@ def run(
     progress: ProgressFn = None,
     skip_duplicates: bool = True,
     use_faces: bool = True,
+    drop_worst: int = 0,
 ) -> Result:
     """
     Measure, rank and shortlist a batch.
@@ -490,6 +503,15 @@ def run(
     `use_faces` adds face detection: whether anyone is in the frame, whether
     their face is lit, and whether it is in focus. It costs a second decode per
     photo and is skipped silently when the model is absent.
+
+    `drop_worst` sets aside that many weakest frames before anything else is
+    decided. They land on `result.dropped` and are excluded from the ranking,
+    the shot bundles and the shortlist - a frame that is not in the running
+    should not be shaping which other frames get picked. The files themselves
+    are untouched; nothing here deletes a photograph.
+
+    At least one frame always survives, however large `drop_worst` is. Setting
+    aside the entire batch is never the useful reading of the request.
     """
     if not paths:
         return Result()
@@ -535,23 +557,48 @@ def run(
             height=m.height,
         ))
 
-    groups = build_groups(candidates, {m.filepath: m.phash for m in usable})
+    # Order everything first. Ties break on filename so two runs over the same
+    # batch never disagree.
+    ordered = sorted(candidates, key=lambda c: (-c.score, c.name))
+
+    # Set the weakest aside before grouping or picking. Doing it here rather
+    # than filtering the output matters: a discarded frame must not sit in a
+    # shot bundle shaping which of its neighbours gets chosen.
+    dropped: List[Candidate] = []
+    if drop_worst > 0 and len(ordered) > 1:
+        cut = min(drop_worst, len(ordered) - 1)      # never drop the last one
+        kept, dropped = ordered[:-cut], ordered[-cut:]
+        dropped = list(reversed(dropped))            # worst first
+    else:
+        kept = ordered
+
+    phashes = {m.filepath: m.phash for m in usable}
+    groups = build_groups(kept, phashes)
     picks = pick(groups, want, skip_duplicates=skip_duplicates)
 
-    # The full ordering, best to worst. Ties break on filename so that two runs
-    # over the same batch never disagree.
-    ranked = sorted(candidates, key=lambda c: (-c.score, c.name))
-    for position, candidate in enumerate(ranked, 1):
+    for position, candidate in enumerate(kept, 1):
         candidate.rank = position
+
+    # Set-aside frames keep a rank too, counting on from the kept ones, so the
+    # UI can show "41st of 50" rather than a blank.
+    #
+    # `dropped` is worst-first for display, so it is walked in reverse to hand
+    # out ascending ranks: the strongest set-aside frame is the one immediately
+    # after the last kept frame.
+    for offset, candidate in enumerate(reversed(dropped), 1):
+        candidate.rank = len(kept) + offset
+        candidate.is_pick = False
+        candidate.pick_rank = 0
 
     if progress:
         progress("done", len(usable), len(usable))
 
     return Result(
-        ranked=ranked,
+        ranked=kept,
         picks=picks,
         groups=groups,
         failures=failures,
-        issue_tally=diagnose.tally([c.issues for c in ranked]),
+        issue_tally=diagnose.tally([c.issues for c in kept]),
         faces_probed=bool(readings),
+        dropped=dropped,
     )

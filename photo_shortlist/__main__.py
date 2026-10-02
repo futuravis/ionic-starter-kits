@@ -51,6 +51,7 @@ def cmd_pick(args: argparse.Namespace) -> int:
         progress=progress,
         skip_duplicates=not args.keep_duplicates,
         use_faces=not args.no_faces,
+        drop_worst=args.drop_worst,
     )
 
     print(f"\n{result.summary()}\n")
@@ -81,6 +82,13 @@ def cmd_pick(args: argparse.Namespace) -> int:
             print(f"\n  WHAT IS WRONG ACROSS THE BATCH")
             for label, count in result.issue_tally.items():
                 print(f"    {count:>3} of {result.total:<3}  {label}")
+
+    if result.dropped:
+        print(f"\n  SET ASIDE AS WEAKEST  ({len(result.dropped)} of "
+              f"{result.considered}, worst first - still on disk)")
+        for candidate in result.dropped:
+            print(f"    {candidate.percent:>5}  {candidate.name:<28} "
+                  f"{candidate.headline}")
 
     if result.failures:
         print(f"\n  {len(result.failures)} file(s) could not be read:")
@@ -131,6 +139,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "alone (faster)")
     p_pick.add_argument("--picks-only", action="store_true",
                         help="print the shortlist without the full ranking")
+    p_pick.add_argument("--drop-worst", type=int, default=0, metavar="N",
+                        help="set aside the N weakest frames before ranking "
+                             "and picking; they are listed, not deleted")
     p_pick.set_defaults(func=cmd_pick)
 
     return parser

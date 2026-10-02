@@ -77,6 +77,9 @@ class Session:
         self.want: int = DEFAULT_WANT
         self.skip_duplicates: bool = True
 
+        # What the last straighten pass did, one entry per uploaded file.
+        self.straightened: List = []
+
         self.running = False
         self.stage = ""
         self.current = 0
@@ -98,6 +101,7 @@ class Session:
             self.directory = ""
             self.uploads = []
             self.result = None
+            self.straightened = []
             self.message = ""
             self.error = ""
         if old and os.path.isdir(old):
@@ -148,7 +152,7 @@ SESSION = Session()
 # ============================================================================
 
 def _do_shortlist(want: int, skip_duplicates: bool, workers: int,
-                  use_faces: bool = True) -> None:
+                  use_faces: bool = True, drop_worst: int = 0) -> None:
     """Run the analysis on a background thread."""
     try:
         with SESSION.lock:
@@ -161,7 +165,7 @@ def _do_shortlist(want: int, skip_duplicates: bool, workers: int,
         result = shortlist.run(
             paths, want=want, workers=workers,
             progress=SESSION.step, skip_duplicates=skip_duplicates,
-            use_faces=use_faces,
+            use_faces=use_faces, drop_worst=drop_worst,
         )
 
         with SESSION.lock:
@@ -263,6 +267,10 @@ def _result_payload() -> dict:
         # How the batch breaks down by shape, so a mix of portrait and
         # landscape is visible before every tile gets cropped to one shape.
         "shape_tally": _shape_tally(),
+        # Frames set aside as weakest. Listed so the removal is visible and
+        # checkable rather than silent - they are still on disk.
+        "dropped": [_photo_payload(c) for c in result.dropped],
+        "considered": result.considered,
         "best": _photo_payload(best) if best else None,
         "picks": [_photo_payload(c) for c in result.picks],
         # The whole batch, best to worst. This is the 1-to-N ordering.
@@ -541,9 +549,11 @@ def _store_uploads(files: List[Tuple[str, bytes]]) -> Tuple[int, List[str]]:
 
     if stored:
         # A new batch invalidates the old shortlist; keeping it on screen next
-        # to different photos is how someone downloads the wrong set.
+        # to different photos is how someone downloads the wrong set. The
+        # straighten report goes with it - it described the previous files.
         with SESSION.lock:
             SESSION.result = None
+            SESSION.straightened = []
 
     return stored, skipped
 
@@ -762,6 +772,12 @@ class Handler(BaseHTTPRequestHandler):
         skip_duplicates = bool(body.get("skip_duplicates", True))
         use_faces = bool(body.get("use_faces", True))
 
+        try:
+            drop_worst = int(body.get("drop_worst", 0))
+        except (TypeError, ValueError):
+            drop_worst = 0
+        drop_worst = max(0, drop_worst)
+
         with SESSION.lock:
             if not SESSION.uploads:
                 self._error("Add some photos first.")
@@ -770,11 +786,12 @@ class Handler(BaseHTTPRequestHandler):
         SESSION.begin("starting")
         threading.Thread(
             target=_do_shortlist,
-            args=(want, skip_duplicates, workers, use_faces),
+            args=(want, skip_duplicates, workers, use_faces, drop_worst),
             daemon=True,
         ).start()
 
-        self._json({"started": True, "want": want, "use_faces": use_faces})
+        self._json({"started": True, "want": want, "use_faces": use_faces,
+                    "drop_worst": drop_worst})
 
 
 # ============================================================================

@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlparse
 
 from wedding_album import config, pipeline
 
-from photo_shortlist import metrics as measurement, shortlist
+from photo_shortlist import metrics as measurement, shortlist, vertical
 from photo_shortlist.app import (
     MAX_FILES, MAX_UPLOAD_BYTES, MAX_WANT, MIN_WANT, SESSION,
     _parse_multipart, _photo_payload, _picks_zip, _ranking_csv,
@@ -55,8 +55,51 @@ GALLERY_THUMB = 420
 # WORK
 # ============================================================================
 
+def _straighten(workers: int) -> None:
+    """
+    Stand every uploaded frame upright, in place, on a background thread.
+
+    Operates on the session's temporary copies, never on the files the user
+    chose. Their originals are not touched.
+    """
+    try:
+        with SESSION.lock:
+            paths = list(SESSION.uploads)
+
+        if not paths:
+            SESSION.finish(error="Add some photos first.")
+            return
+
+        results = vertical.straighten_all(paths, workers=workers,
+                                          progress=SESSION.step)
+
+        with SESSION.lock:
+            SESSION.straightened = results
+            # Rotating changes the pixels, so any existing analysis describes
+            # photographs that no longer exist in that form.
+            SESSION.result = None
+
+        turned = [r for r in results if r.changed]
+        failed = [r for r in results if not r.ok]
+
+        if not turned and not failed:
+            SESSION.finish(message="Every photo was already upright.")
+            return
+
+        note = (f"Rotated {len(turned)} of {len(results)} photo(s) upright"
+                if turned else "No photo needed rotating")
+        if failed:
+            note += f", {len(failed)} could not be read"
+        SESSION.finish(message=note + ".")
+
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        SESSION.finish(error=f"{type(exc).__name__}: {exc}")
+        traceback.print_exc()
+
+
 def _analyse(want: int, skip_duplicates: bool, workers: int,
-             use_faces: bool) -> None:
+             use_faces: bool, drop_worst: int = 0) -> None:
     """Run the analysis on a background thread."""
     try:
         with SESSION.lock:
@@ -69,6 +112,7 @@ def _analyse(want: int, skip_duplicates: bool, workers: int,
         result = shortlist.run(
             paths, want=want, workers=workers, progress=SESSION.step,
             skip_duplicates=skip_duplicates, use_faces=use_faces,
+            drop_worst=drop_worst,
         )
 
         with SESSION.lock:
@@ -110,6 +154,38 @@ def _settings_payload() -> dict:
         "workers": pipeline.default_workers(),
         "faces_available": measurement.faces_available(),
         "ready": SESSION.result is not None,
+        "straightened": _straighten_payload(),
+    }
+
+
+def _straighten_payload() -> dict:
+    """
+    What the last straighten pass did.
+
+    Reported per photo rather than as a count, so a wrong rotation can be
+    spotted and attributed instead of being invisible.
+    """
+    with SESSION.lock:
+        results = list(SESSION.straightened)
+
+    if not results:
+        return {"ran": False}
+
+    return {
+        "ran": True,
+        "total": len(results),
+        "rotated": sum(1 for r in results if r.changed),
+        "failed": sum(1 for r in results if not r.ok),
+        "photos": [
+            {
+                "name": r.name,
+                "angle": r.angle,
+                "before": f"{r.before[0]}x{r.before[1]}",
+                "after": f"{r.after[0]}x{r.after[1]}",
+                "error": r.error,
+            }
+            for r in results if r.changed or not r.ok
+        ],
     }
 
 
@@ -297,6 +373,23 @@ class Handler(BaseHTTPRequestHandler):
             self._upload()
             return
 
+        if route == "/api/straighten":
+            if SESSION.progress()["running"]:
+                self._error("Already working.", 409)
+                return
+            with SESSION.lock:
+                if not SESSION.uploads:
+                    self._error("Add some photos first.")
+                    return
+            SESSION.begin("starting")
+            threading.Thread(
+                target=_straighten,
+                args=(pipeline.default_workers(),),
+                daemon=True,
+            ).start()
+            self._json({"started": True})
+            return
+
         if route == "/api/analyse":
             self._start()
             return
@@ -374,6 +467,11 @@ class Handler(BaseHTTPRequestHandler):
         skip_duplicates = bool(body.get("skip_duplicates", True))
         use_faces = bool(body.get("use_faces", True))
 
+        try:
+            drop_worst = max(0, int(body.get("drop_worst", 0)))
+        except (TypeError, ValueError):
+            drop_worst = 0
+
         with SESSION.lock:
             if not SESSION.uploads:
                 self._error("Add some photos first.")
@@ -382,11 +480,11 @@ class Handler(BaseHTTPRequestHandler):
         SESSION.begin("starting")
         threading.Thread(
             target=_analyse,
-            args=(want, skip_duplicates, workers, use_faces),
+            args=(want, skip_duplicates, workers, use_faces, drop_worst),
             daemon=True,
         ).start()
 
-        self._json({"started": True, "want": want})
+        self._json({"started": True, "want": want, "drop_worst": drop_worst})
 
 
 # ============================================================================

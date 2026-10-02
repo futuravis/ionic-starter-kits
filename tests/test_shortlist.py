@@ -25,6 +25,7 @@ Run with:
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
 
@@ -33,7 +34,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from photo_shortlist import diagnose, metrics, shortlist  # noqa: E402
+from photo_shortlist import diagnose, metrics, shortlist, vertical  # noqa: E402
 from wedding_album import quality  # noqa: E402
 
 
@@ -266,6 +267,213 @@ def check_shortlist_spread(result: shortlist.Result) -> None:
        all(c in result.ranked for c in result.picks))
 
 
+def check_drop_worst(paths) -> None:
+    """
+    Setting the weakest frames aside.
+
+    The ordering matters as much as the count. Dropping happens before grouping
+    and picking, so a frame that is out of the running cannot sit in a shot
+    bundle influencing which of its neighbours gets chosen.
+    """
+    print("\nsetting the weakest aside")
+
+    full = shortlist.run(paths, want=3, workers=1, use_faces=False)
+    cut = shortlist.run(paths, want=3, workers=1, use_faces=False, drop_worst=4)
+
+    ok("nothing is set aside by default", full.dropped == [])
+    ok("four frames set aside when asked", len(cut.dropped) == 4,
+       f"{len(cut.dropped)} set aside")
+    ok("the ranking shrinks by exactly that many",
+       cut.total == full.total - 4, f"{full.total} -> {cut.total}")
+    ok("considered still counts the whole batch",
+       cut.considered == full.total)
+
+    ok("the ones set aside are the weakest",
+       [c.name for c in cut.dropped]
+       == [c.name for c in reversed(full.ranked[-4:])],
+       "worst first")
+
+    kept = {c.name for c in cut.ranked}
+    gone = {c.name for c in cut.dropped}
+    ok("kept and set aside do not overlap", not (kept & gone))
+    ok("ranks are renumbered 1..N over what is kept",
+       [c.rank for c in cut.ranked] == list(range(1, cut.total + 1)))
+
+    # The point of dropping before grouping rather than filtering afterwards.
+    ok("no set-aside frame appears in a shot bundle",
+       not any(c.name in gone for g in cut.groups for c in g.members))
+    ok("no set-aside frame is in the shortlist",
+       not any(c.name in gone for c in cut.picks))
+    ok("no set-aside frame is marked as a pick",
+       not any(c.is_pick for c in cut.dropped))
+
+    # Set-aside frames carry a rank so the UI can say "8th of 10". The list is
+    # worst-first for display, which makes it easy to assign these backwards -
+    # and that showed up on screen as rank 8 holding the lowest score.
+    ok("set-aside ranks continue after the kept ones",
+       sorted(c.rank for c in cut.dropped)
+       == list(range(cut.total + 1, cut.considered + 1)),
+       f"{sorted(c.rank for c in cut.dropped)}")
+    ok("a better set-aside frame has a better rank",
+       all(a.rank > b.rank for a, b in zip(cut.dropped, cut.dropped[1:])),
+       "worst-first list, ascending ranks")
+    ok("the best set-aside frame ranks just below the last kept one",
+       max(c.score for c in cut.dropped)
+       == next(c.score for c in cut.dropped if c.rank == cut.total + 1))
+
+    ok("the fault tally only counts what is kept",
+       sum(diagnose.tally([c.issues for c in cut.ranked]).values())
+       == sum(len(c.issues) for c in cut.ranked))
+
+    # Asking to drop everything is never the useful reading.
+    everything = shortlist.run(paths, want=3, workers=1, use_faces=False,
+                               drop_worst=999)
+    ok("one frame always survives an absurd request",
+       everything.total == 1 and len(everything.dropped) == full.total - 1,
+       f"kept {everything.total}, set aside {len(everything.dropped)}")
+    ok("the survivor is the best frame",
+       everything.ranked[0].name == full.ranked[0].name)
+
+    single = shortlist.run(paths[:1], want=1, workers=1, use_faces=False,
+                           drop_worst=5)
+    ok("a one-photo batch is never emptied",
+       single.total == 1 and single.dropped == [])
+
+
+def check_shapes(paths) -> None:
+    """Orientation, which the review page uses to mark cropped tiles."""
+    print("\nphoto shape")
+
+    result = shortlist.run(paths, want=3, workers=1, use_faces=False)
+    first = result.ranked[0]
+
+    ok("the test batch is landscape", first.orientation == "landscape",
+       f"{first.width}x{first.height}, aspect {first.aspect:.2f}")
+    ok("every frame gets a shape",
+       all(c.orientation != "unknown" for c in result.ranked))
+
+    # The dead band: a one-pixel difference must not decide the answer.
+    square = shortlist.Candidate(filepath="s.jpg", width=3000, height=2999)
+    ok("a near-square frame is called square", square.orientation == "square",
+       f"aspect {square.aspect:.4f}")
+
+    tall = shortlist.Candidate(filepath="t.jpg", width=800, height=1200)
+    ok("a tall frame is called portrait", tall.orientation == "portrait")
+
+    unknown = shortlist.Candidate(filepath="u.jpg")
+    ok("an unmeasured frame reports unknown, not a guess",
+       unknown.orientation == "unknown" and unknown.aspect == 0.0)
+
+
+def check_straighten(directory: str) -> None:
+    """
+    Standing frames upright.
+
+    The face-driven half of this cannot be tested here: the synthetic batch has
+    no faces, and committing a photograph of a real person to the repository to
+    test it would be worse than the gap. What is tested is everything that must
+    hold regardless - that a frame nothing can be judged by is left completely
+    alone, that only whole quarter turns are ever applied, and that running it
+    twice changes nothing the second time.
+
+    The face-driven behaviour was checked by eye on a real shoot: 15 of 40
+    frames were sideways, all were turned 270 degrees, and 6000x4000 became
+    4000x6000 with heads at the top.
+    """
+    print("\nstanding frames upright")
+
+    source = os.path.join(directory, "good1.jpg")
+    work = os.path.join(directory, "upright_probe.jpg")
+    shutil.copy2(source, work)
+
+    before = cv2.imread(work)
+    before_shape = before.shape
+
+    result = vertical.straighten_file(work)
+    ok("a frame with no face is left alone", result.ok and result.angle == 0,
+       f"angle {result.angle}")
+
+    after = cv2.imread(work)
+    ok("its pixels are untouched", np.array_equal(before, after),
+       "byte-for-byte identical")
+    ok("its size is unchanged", after.shape == before_shape)
+
+    # Quarter turns only: the dimensions either stay or swap exactly, which
+    # cannot happen if anything was cropped or stretched.
+    turned_image = cv2.rotate(before, cv2.ROTATE_90_CLOCKWISE)
+    ok("a quarter turn swaps the dimensions exactly",
+       turned_image.shape[0] == before_shape[1]
+       and turned_image.shape[1] == before_shape[0])
+    # Compare the whole multiset of pixel values, not a slice of each array:
+    # a rotation reorders pixels, so the first N elements of the two arrays
+    # hold different pixels and comparing them proves nothing.
+    ok("a quarter turn preserves every pixel",
+       np.array_equal(np.sort(turned_image.reshape(-1)),
+                      np.sort(before.reshape(-1))),
+       f"{before.size} values, identical multiset")
+
+    second = vertical.straighten_file(work)
+    ok("running it again is a no-op", second.ok and second.angle == 0)
+
+    missing = vertical.straighten_file(os.path.join(directory, "nope.jpg"))
+    ok("a missing file is reported, not raised",
+       not missing.ok and "unreadable" in missing.error)
+
+    corrupt = vertical.straighten_file(os.path.join(directory, "corrupt.jpg"))
+    ok("a corrupt file is reported, not raised", not corrupt.ok)
+
+    batch = vertical.straighten_all(
+        [source, os.path.join(directory, "good2.jpg")], workers=1)
+    ok("a batch returns one result per file", len(batch) == 2)
+    ok("every batch result is accounted for",
+       all(r.ok or r.error for r in batch))
+
+    ok("an empty frame yields no rotation",
+       vertical.detect_upright(np.zeros((0, 0, 3), np.uint8)) == 0)
+
+
+def check_vertical_conversion(directory: str) -> None:
+    """Converting to a vertical format without losing the subject."""
+    print("\nvertical conversion")
+
+    source = os.path.join(directory, "good1.jpg")
+    original = cv2.imread(source)
+    oh, ow = original.shape[:2]
+
+    fit = os.path.join(directory, "fit.jpg")
+    result = vertical.convert(source, fit, height=960)
+    ok("fit mode writes a file", result.ok and os.path.isfile(fit))
+    ok("fit mode keeps the whole photograph",
+       result.pixels_kept == 1.0 and not result.cropped)
+
+    canvas = cv2.imread(fit)
+    ch, cw = canvas.shape[:2]
+    ok("the canvas is 9:16", abs((cw / ch) - 9 / 16) < 0.01,
+       f"{cw}x{ch}, ratio {cw / ch:.4f}")
+
+    x, y, pw, ph = result.subject_box
+    ok("the photograph sits inside the canvas",
+       x >= 0 and y >= 0 and x + pw <= cw and y + ph <= ch)
+    ok("its proportions are unchanged",
+       abs((pw / ph) - (ow / oh)) < 0.02,
+       f"source {ow / oh:.3f}, placed {pw / ph:.3f}")
+
+    crop = os.path.join(directory, "crop.jpg")
+    cropped = vertical.convert_cropped(source, crop, height=960)
+    ok("crop mode writes a file", cropped.ok and os.path.isfile(crop))
+    ok("crop mode reports what it discarded",
+       cropped.cropped and 0.0 < cropped.pixels_kept < 1.0,
+       f"{cropped.pixels_kept * 100:.0f}% kept")
+
+    cc = cv2.imread(crop)
+    ok("the cropped canvas is also 9:16",
+       abs((cc.shape[1] / cc.shape[0]) - 9 / 16) < 0.01)
+
+    bad = vertical.convert(os.path.join(directory, "corrupt.jpg"),
+                           os.path.join(directory, "never.jpg"))
+    ok("an unreadable source is reported, not raised", not bad.ok)
+
+
 def check_small_batch(directory: str) -> None:
     print("\nsmall batch: comparative faults switch off")
     paths = sorted(
@@ -344,6 +552,10 @@ def main() -> int:
         check_faults(result)
         check_shortlist_spread(result)
         check_faces_absent_vs_none(result)
+        check_drop_worst(paths)
+        check_shapes(paths)
+        check_straighten(directory)
+        check_vertical_conversion(directory)
         check_small_batch(directory)
 
     total = PASSED + FAILED
