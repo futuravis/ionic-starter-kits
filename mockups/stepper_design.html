@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Studio &mdash; 7-step stepper, design mockup</title>
+<style>
+/* ==========================================================================
+   DESIGN MOCKUP - NOT THE REAL APPLICATION
+   Standalone: no server, no build step, no network. Open it in a browser.
+   Every number shown comes from the real 40-photo test batch so the layout is
+   judged against realistic content rather than flattering placeholders.
+   ========================================================================== */
+
+:root {
+  --paper:#fbfaf8; --card:#fff; --sunk:#f4f2ee; --rule:#e4e0d8; --rule-s:#d2ccc0;
+  --ink:#1c1a17; --ink-soft:#5c564d; --ink-faint:#8d867a;
+  --accent:#a8562f; --accent-soft:#f6ece6;
+  --major:#a33a32; --major-soft:#fbeae8;
+  --minor:#8a6420; --minor-soft:#fbf2e0;
+  --clean:#3d6b45; --clean-soft:#ebf3ec;
+  --note:#2f5d8a; --note-soft:#eaf1f8;
+  --r:12px; --r-sm:8px;
+  --shadow:0 1px 2px rgba(28,26,23,.05), 0 8px 24px rgba(28,26,23,.05);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}          /* the v0.01 trap - keep this rule */
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.shell{max-width:1240px;margin:0 auto;padding:0 28px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- mockup banner ---- */
+.mock-banner{background:#2b2724;color:#f3efe9;padding:10px 0;font-size:13px}
+.mock-banner .shell{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mock-banner strong{color:#e8b887}
+.mock-banner .tag{background:rgba(255,255,255,.14);padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.05em}
+
+/* ---- top bar + stepper ---- */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(251,250,248,.93);backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--rule)}
+.topbar-in{display:flex;align-items:center;gap:20px;height:66px;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#d08a52)}
+.brand-name{font-weight:650;letter-spacing:-.01em}
+
+.stepper{display:flex;align-items:center;gap:2px;overflow-x:auto;flex:1 1 auto;justify-content:center}
+.stp{display:flex;align-items:center;gap:7px;border:0;background:none;cursor:pointer;
+     font:inherit;font-size:13px;font-weight:550;color:var(--ink-faint);
+     padding:7px 11px;border-radius:99px;white-space:nowrap}
+.stp:hover{color:var(--ink);background:var(--sunk)}
+.stp.on{color:var(--ink);background:var(--sunk)}
+.stp.done{color:var(--clean)}
+.stp .n{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+        background:var(--rule);color:var(--ink-soft);font-size:11px;font-weight:700}
+.stp.on .n{background:var(--accent);color:#fff}
+.stp.done .n{background:var(--clean);color:#fff}
+.stp-sep{width:14px;height:1px;background:var(--rule-s);flex:0 0 auto}
+@media(max-width:1100px){.stp .lbl{display:none}.stp-sep{width:8px}}
+
+.badge-local{font-size:12px;font-weight:600;color:var(--clean);background:var(--clean-soft);
+             border:1px solid #cfe0d2;padding:5px 11px;border-radius:99px;flex:0 0 auto}
+@media(max-width:900px){.badge-local{display:none}}
+
+/* ---- panels ---- */
+.panel{padding:40px 0 20px}
+h1{font-size:30px;line-height:1.2;margin:0 0 8px;letter-spacing:-.022em;font-weight:660}
+.lede{margin:0;color:var(--ink-soft);max-width:64ch}
+.sect-t{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:680;margin:0 0 6px}
+.sect-h{margin:38px 0 16px}
+.sect-n{margin:0;font-size:14px;color:var(--ink-soft);max-width:70ch}
+.head{margin-bottom:24px}
+.row-b{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+
+/* ---- buttons ---- */
+.btn{display:inline-block;font:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:99px;
+     border:1px solid var(--rule-s);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--ink-faint)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-p:hover{background:#964926;border-color:#964926}
+.btn-q{background:transparent}
+.btn-big{padding:13px 24px;font-size:15px}
+.btn-sm{padding:6px 12px;font-size:12.5px}
+.btn-d{color:var(--major);border-color:#eccfca}
+.btn-d:hover{background:var(--major-soft)}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:38px;padding-top:22px;border-top:1px solid var(--rule)}
+
+/* ---- design notes ---- */
+.dn{background:var(--note-soft);border:1px solid #d3e2f0;border-left:3px solid var(--note);
+    border-radius:var(--r-sm);padding:14px 16px;margin:20px 0}
+.dn h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--note);font-weight:700}
+.dn p{margin:0 0 7px;font-size:13.5px;color:#2c4a66;line-height:1.55}
+.dn p:last-child{margin-bottom:0}
+.dn code{font:12px var(--mono);background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #d3e2f0}
+.dn .flag{display:inline-block;background:var(--note);color:#fff;font-size:10px;font-weight:700;
+          letter-spacing:.05em;padding:2px 7px;border-radius:99px;margin-right:7px;vertical-align:1px}
+.dn.warn{background:var(--minor-soft);border-color:#f0e2c4;border-left-color:var(--minor)}
+.dn.warn h4,.dn.warn p{color:#6d4f19}
+.dn.warn .flag{background:var(--minor)}
+.dn.warn code{border-color:#f0e2c4}
+
+/* ---- placeholder frames ---- */
+.ph{position:relative;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;
+    display:grid;place-items:center;color:var(--ink-faint);font:11px var(--mono);text-align:center}
+.ph::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 9px,rgba(0,0,0,.022) 9px,rgba(0,0,0,.022) 18px)}
+.ph span{position:relative;z-index:1;padding:4px}
+.ph.land{aspect-ratio:3/2}
+.ph.port{aspect-ratio:2/3}
+.ph.sq{aspect-ratio:1/1}
+.ph.rot span{transform:rotate(-90deg);white-space:nowrap}
+
+.pin{position:absolute;top:7px;left:7px;background:rgba(28,26,23,.8);color:#fff;
+     font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2}
+.pin.gold{background:var(--accent)}
+.tab{position:absolute;top:7px;right:7px;background:rgba(255,255,255,.94);color:var(--ink);
+     font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.flagpill{position:absolute;bottom:7px;left:7px;background:var(--accent);color:#fff;font-size:10px;
+          font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;z-index:2}
+.shapepill{position:absolute;bottom:7px;right:7px;background:rgba(255,255,255,.92);color:var(--ink-soft);
+           font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:99px;z-index:2}
+
+/* ---- grids ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:14px}
+.grid-w{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.card.sel{border-color:var(--accent)}
+.card.bad{border-color:#eccfca}
+.card-m{padding:10px 12px 12px}
+.fn{font:11px var(--mono);color:var(--ink-faint);word-break:break-all;margin-bottom:4px}
+.state{font-size:12.5px;font-weight:600}
+.state.major{color:var(--major)} .state.minor{color:var(--minor)} .state.clean{color:var(--clean)}
+
+/* ---- stats ---- */
+.stats{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));
+       gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.stats li{background:var(--card);padding:15px 17px}
+.stats .f{font-size:23px;font-weight:680;letter-spacing:-.02em;line-height:1.1}
+.stats .c{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:620;margin-top:2px}
+.stats li.warn .f{color:var(--minor)}
+.stats li.bad .f{color:var(--major)}
+
+/* ---- dropzone ---- */
+.dz{border:1.5px dashed var(--rule-s);border-radius:var(--r);background:var(--card);
+    padding:52px 24px;text-align:center;color:var(--ink-soft);cursor:pointer}
+.dz:hover{border-color:var(--accent)}
+.dz .big{font-size:17px;font-weight:600;color:var(--ink);margin:0 0 4px}
+.dz .small{font-size:13px;color:var(--ink-faint);margin:0}
+
+/* ---- filmstrip ---- */
+.strip{list-style:none;margin:0;padding:0 0 8px;display:grid;grid-auto-flow:column;
+       grid-auto-columns:76px;grid-template-rows:114px;gap:9px;overflow-x:auto}
+
+/* ---- options ---- */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;
+      background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:24px;box-shadow:var(--shadow)}
+.opt>label{display:block;font-size:13px;font-weight:620;margin-bottom:8px}
+.hint{margin:7px 0 0;font-size:12.5px;color:var(--ink-faint);line-height:1.5}
+.stepn{display:inline-flex;align-items:center;border:1px solid var(--rule-s);border-radius:99px;overflow:hidden;background:var(--card)}
+.stepn button{width:36px;height:36px;border:0;background:none;cursor:pointer;font-size:17px;color:var(--ink-soft)}
+.stepn button:hover{background:var(--sunk)}
+.stepn input{width:54px;height:36px;border:0;text-align:center;font:600 16px var(--mono);background:none;color:var(--ink)}
+.sw{display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:3px}
+.sw input{position:absolute;opacity:0}
+.sw .tr{position:relative;width:38px;height:22px;border-radius:99px;background:var(--rule-s);flex:0 0 auto}
+.sw .tr::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .16s}
+.sw input:checked+.tr{background:var(--accent)}
+.sw input:checked+.tr::after{transform:translateX(16px)}
+.sw span:last-child{font-size:14px;font-weight:550}
+
+/* ---- progress ---- */
+.prog{margin-top:22px}
+.prog-r{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:7px}
+.meter{height:6px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.meter>span{display:block;height:100%;background:var(--accent)}
+.stagelist{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px;font-size:13px}
+.stagelist li{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;color:var(--ink-faint)}
+.stagelist li.ok{color:var(--ink)}
+.stagelist .dot{width:8px;height:8px;border-radius:50%;background:var(--rule-s);margin-left:5px}
+.stagelist li.ok .dot{background:var(--clean)}
+.stagelist li.now .dot{background:var(--accent)}
+.stagelist .t{font:11.5px var(--mono);color:var(--ink-faint)}
+
+/* ---- rotation review ---- */
+.turns{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.turn{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.turn-pair{display:grid;grid-template-columns:1fr 22px 1fr;gap:8px;align-items:center;margin-bottom:11px}
+.turn-arrow{text-align:center;color:var(--accent);font-size:17px;font-weight:700}
+.turn-cap{font:10px var(--mono);color:var(--ink-faint);text-align:center;margin-top:5px;text-transform:uppercase;letter-spacing:.05em}
+.turn-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.turn-deg{font:700 11px/1 var(--mono);background:var(--clean);color:#fff;padding:4px 9px;border-radius:99px}
+.turn-tools{display:flex;gap:5px}
+.icn{width:30px;height:30px;border-radius:50%;border:1px solid var(--rule-s);background:var(--card);
+     cursor:pointer;font-size:13px;color:var(--ink-soft);display:grid;place-items:center}
+.icn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---- duplicate pairs ---- */
+.dups{display:grid;gap:14px}
+.dup{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.dup-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.dup-t{font-size:14px;font-weight:640;margin:0}
+.dup-meta{font-size:12px;color:var(--ink-faint)}
+.dup-row{display:flex;gap:12px;flex-wrap:wrap}
+.dup-item{width:150px}
+.dup-item .ph{margin-bottom:7px}
+.dup-item.keep .ph{outline:2px solid var(--clean);outline-offset:-2px}
+.dup-item.toss .ph{opacity:.42}
+.dup-item .dn-line{font:10.5px var(--mono);color:var(--ink-faint);margin-bottom:6px}
+.pickrow{display:flex;gap:5px}
+.chip-b{font:inherit;font-size:11px;font-weight:620;padding:4px 9px;border-radius:99px;
+        border:1px solid var(--rule-s);background:var(--card);cursor:pointer;color:var(--ink-soft)}
+.chip-b.on{background:var(--clean);border-color:var(--clean);color:#fff}
+.chip-b.off.on{background:var(--major);border-color:var(--major)}
+
+/* ---- slider ---- */
+.sl{width:100%;accent-color:var(--accent)}
+.sl-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+.sl-val{font:700 13px var(--mono);color:var(--accent);min-width:46px;text-align:right}
+
+/* ---- format preview ---- */
+.fmt{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px}
+.fmt-card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:14px;text-align:center;box-shadow:var(--shadow)}
+.fmt-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),var(--shadow)}
+.fmt-card h4{margin:0 0 10px;font-size:13px;font-weight:640}
+.fmt-stage{position:relative;aspect-ratio:9/16;border-radius:var(--r-sm);overflow:hidden;background:#ddd8d0;margin-bottom:10px}
+.fmt-wash{position:absolute;inset:0;background:linear-gradient(170deg,#c9b8ad,#a89a93 45%,#8e8580);filter:blur(0px)}
+.fmt-inner{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:3/2;
+           background:var(--sunk);display:grid;place-items:center;font:10px var(--mono);color:var(--ink-soft);
+           border:2px solid rgba(28,26,23,.5)}
+.fmt-full{position:absolute;inset:0;background:var(--sunk);display:grid;place-items:center;font:10px var(--mono);color:var(--ink-soft)}
+.fmt-note{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin:0}
+.fmt-kept{font:700 12px var(--mono);margin-bottom:4px}
+.fmt-kept.good{color:var(--clean)} .fmt-kept.lossy{color:var(--major)}
+
+/* ---- table ---- */
+.tw{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);
+   font-weight:680;padding:11px 15px;border-bottom:1px solid var(--rule);background:var(--sunk)}
+td{padding:10px 15px;border-bottom:1px solid var(--rule)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--sunk)}
+.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cell{display:flex;align-items:center;gap:10px}
+.cell .ph{width:38px;height:56px;flex:0 0 auto}
+.cell .ph.land{height:38px;width:56px}
+tr.sel{background:#fdf7f3}
+.tag{font-size:11px;padding:3px 8px;border-radius:99px;font-weight:620;border:1px solid transparent;display:inline-block}
+.tag.major{background:var(--major-soft);color:var(--major);border-color:#f0cfcb}
+.tag.minor{background:var(--minor-soft);color:var(--minor);border-color:#f0e2c4}
+.tag.clean{background:var(--clean-soft);color:var(--clean);border-color:#cfe0d2}
+
+/* ---- segmented ---- */
+.seg-g{display:inline-flex;background:var(--sunk);border-radius:99px;padding:3px;gap:2px}
+.seg{font:inherit;font-size:13px;font-weight:580;color:var(--ink-soft);background:none;border:0;
+     padding:6px 13px;border-radius:99px;cursor:pointer}
+.seg.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.07)}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap}
+
+/* ---- feature ---- */
+.feat{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,1fr);gap:24px;
+      background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+@media(max-width:860px){.feat{grid-template-columns:1fr}}
+.big-score{font-size:50px;font-weight:700;letter-spacing:-.035em;line-height:1}
+.big-score small{font-size:17px;font-weight:600;color:var(--ink-faint)}
+.verdict{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:9px}
+.verdict li{display:grid;grid-template-columns:9px 1fr;gap:10px;font-size:13.5px}
+.verdict .pip{width:9px;height:9px;border-radius:50%;margin-top:7px}
+.verdict .pip.clean{background:var(--clean)}
+.verdict .pip.minor{background:var(--minor)}
+.verdict .what{font-weight:640}
+.verdict .why{color:var(--ink-soft)}
+.bars{margin-top:14px;display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:72px 1fr 30px;gap:9px;align-items:center;font-size:11.5px;color:var(--ink-soft)}
+.bar .tr{height:5px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.bar .fl{display:block;height:100%;background:var(--ink-faint)}
+.bar .fl.hi{background:var(--clean)} .bar .fl.lo{background:var(--major)}
+.bar .v{text-align:right;font:11px var(--mono);color:var(--ink-faint)}
+
+footer{border-top:1px solid var(--rule);margin-top:50px;padding:30px 28px 60px}
+footer p{margin:0 0 7px;font-size:13px;color:var(--ink-soft);max-width:74ch}
+</style>
+</head>
+<body>
+
+<div class="mock-banner">
+  <div class="shell">
+    <span><span class="tag">MOCKUP</span> &nbsp;Design only &mdash; nothing here is wired up. Click the numbered steps to walk through all seven screens.</span>
+    <span><strong>mockups/stepper_design.html</strong> &nbsp;&middot;&nbsp; separate from the working app</span>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="shell topbar-in">
+    <div class="brand"><span class="mark"></span><span class="brand-name">Photo Studio</span></div>
+    <nav class="stepper" id="stepper" aria-label="Progress"></nav>
+    <span class="badge-local">Runs locally</span>
+  </div>
+</header>
+
+<main class="shell" id="screens">
+
+<!-- ======================= 1 ADD ======================= -->
+<section class="panel" data-step="1">
+  <div class="head">
+    <h1>Add the shoot</h1>
+    <p class="lede">Drop in a batch. Nothing leaves this machine.</p>
+  </div>
+
+  <div class="dz">
+    <p class="big">Drag photos here, or click to browse</p>
+    <p class="small">.jpg .jpeg .png .tif .tiff .bmp .webp &nbsp;&middot;&nbsp; up to 300 photos, 512 MB per upload</p>
+  </div>
+
+  <div class="sect-h row-b">
+    <div><h2 class="sect-t">In this batch</h2><p class="sect-n">40 photos, 286 MB</p></div>
+    <button class="btn btn-q btn-sm">Clear all</button>
+  </div>
+
+  <ul class="strip">
+    <li><div class="ph rot land" style="height:114px"><span>7Y4A3139</span></div></li>
+    <li><div class="ph land" style="height:114px"><span>7Y4A3146</span></div></li>
+    <li><div class="ph land" style="height:114px"><span>7Y4A3152</span></div></li>
+    <li><div class="ph rot land" style="height:114px"><span>7Y4A3156</span></div></li>
+    <li><div class="ph land" style="height:114px"><span>7Y4A3162</span></div></li>
+    <li><div class="ph rot land" style="height:114px"><span>7Y4A3168</span></div></li>
+    <li><div class="ph rot land" style="height:114px"><span>7Y4A3174</span></div></li>
+    <li><div class="ph land" style="height:114px"><span>7Y4A3195</span></div></li>
+    <li><div class="ph land" style="height:114px"><span>7Y4A3196</span></div></li>
+    <li><div class="ph rot land" style="height:114px"><span>7Y4A3204</span></div></li>
+  </ul>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">UNCHANGED</span>This screen already exists and works. The only change is that
+      <strong>Continue no longer silently rotates everything</strong> &mdash; rotation becomes step 2, where it can be seen and corrected.</p>
+    <p>Sideways thumbnails are deliberately shown as-stored here. Hiding the problem on the Add screen would make step 2 look like it did nothing.</p>
+  </div>
+
+  <div class="nav"><span></span><button class="btn btn-p btn-big" data-go="2">Continue to rotation &rarr;</button></div>
+</section>
+
+<!-- ======================= 2 STRAIGHTEN ======================= -->
+<section class="panel" data-step="2" hidden>
+  <div class="head">
+    <h1>Straighten</h1>
+    <p class="lede">
+      15 of 40 photos were stored sideways. Each one below was rotated so heads
+      sit at the top. Only whole quarter turns were used &mdash; nothing cropped,
+      stretched or resampled.
+    </p>
+  </div>
+
+  <ul class="stats">
+    <li><div class="f">40</div><div class="c">checked</div></li>
+    <li><div class="f">15</div><div class="c">rotated</div></li>
+    <li><div class="f">25</div><div class="c">already upright</div></li>
+    <li><div class="f">0</div><div class="c">unreadable</div></li>
+  </ul>
+
+  <div class="sect-h"><h2 class="sect-t">What was rotated &mdash; check these</h2>
+    <p class="sect-n">Rotation is judged from face detection, so it can be wrong. Override any frame with the buttons.</p></div>
+
+  <div class="turns">
+    <div class="turn">
+      <div class="turn-pair">
+        <div><div class="ph rot land"><span>7Y4A3156</span></div><div class="turn-cap">before</div></div>
+        <div class="turn-arrow">&rarr;</div>
+        <div><div class="ph port"><span>7Y4A3156</span></div><div class="turn-cap">after</div></div>
+      </div>
+      <div class="turn-row">
+        <span class="turn-deg">270&deg;</span>
+        <span class="dup-meta mono">6000&times;4000 &rarr; 4000&times;6000</span>
+        <div class="turn-tools">
+          <button class="icn" title="Rotate left">&#8630;</button>
+          <button class="icn" title="Rotate right">&#8631;</button>
+          <button class="icn" title="Undo, keep as uploaded">&#8634;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="turn-pair">
+        <div><div class="ph rot land"><span>7Y4A3168</span></div><div class="turn-cap">before</div></div>
+        <div class="turn-arrow">&rarr;</div>
+        <div><div class="ph port"><span>7Y4A3168</span></div><div class="turn-cap">after</div></div>
+      </div>
+      <div class="turn-row">
+        <span class="turn-deg">270&deg;</span>
+        <span class="dup-meta mono">6000&times;4000 &rarr; 4000&times;6000</span>
+        <div class="turn-tools">
+          <button class="icn" title="Rotate left">&#8630;</button>
+          <button class="icn" title="Rotate right">&#8631;</button>
+          <button class="icn" title="Undo, keep as uploaded">&#8634;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="turn">
+      <div class="turn-pair">
+        <div><div class="ph rot land"><span>7Y4A3218</span></div><div class="turn-cap">before</div></div>
+        <div class="turn-arrow">&rarr;</div>
+        <div><div class="ph port"><span>7Y4A3218</span></div><div class="turn-cap">after</div></div>
+      </div>
+      <div class="turn-row">
+        <span class="turn-deg">270&deg;</span>
+        <span class="dup-meta mono">6000&times;4000 &rarr; 4000&times;6000</span>
+        <div class="turn-tools">
+          <button class="icn" title="Rotate left">&#8630;</button>
+          <button class="icn" title="Rotate right">&#8631;</button>
+          <button class="icn" title="Undo, keep as uploaded">&#8634;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">CODE EXISTS</span>Detection and rotation shipped in v0.03 and are tested. <strong>Only the screen and the manual override are new.</strong></p>
+    <p>Why a human still has to look: the rotation is inferred by running the face detector at all four quarter turns and taking the most confident. There is no usable EXIF &mdash; all 40 files report <code>orientation: 1</code>, including the sideways ones. A frame with no face is deliberately left alone, so landscapes, detail shots and rings will never be rotated automatically even when they need it.</p>
+    <p>Only frames that changed are listed. Showing all 40 would bury the 15 that need checking.</p>
+  </div>
+
+  <div class="dn warn">
+    <h4>Open question for you</h4>
+    <p>This step <strong>rewrites the uploaded copies</strong> (never your originals). Going back to step 1 after this point and re-adding photos means re-rotating. Should going backwards be allowed freely, or should this step lock once you continue?</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="1">&larr; Back to add</button>
+    <button class="btn btn-p btn-big" data-go="3">Looks right, analyse &rarr;</button>
+  </div>
+</section>
+
+<!-- ======================= 3 ANALYSE ======================= -->
+<section class="panel" data-step="3" hidden>
+  <div class="head">
+    <h1>Analyse</h1>
+    <p class="lede">
+      Measuring sharpness, exposure, contrast, colour and noise, then comparing
+      each frame against the rest of the batch.
+    </p>
+  </div>
+
+  <div class="opts">
+    <div class="opt">
+      <label>What to measure</label>
+      <label class="sw"><input type="checkbox" checked><span class="tr"></span><span>Check faces</span></label>
+      <p class="hint">Presence, size, lighting and focus on people. Adds about one second per 40 photos.</p>
+      <p class="hint">Closed eyes and expressions are <strong>not</strong> detected &mdash; the model returns five landmarks with no eyelid or mouth-shape data.</p>
+    </div>
+    <div class="opt">
+      <label>Scoring</label>
+      <p class="hint">Sharpness 0.30 &nbsp; Noise 0.25 &nbsp; Exposure 0.18 &nbsp; Contrast 0.15 &nbsp; Colour 0.12</p>
+      <p class="hint">Noise is weighted more heavily here than in the album tool, because grain otherwise reads as fine detail and wins.</p>
+    </div>
+    <div class="opt" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:10px">
+      <button class="btn btn-p btn-big">Analyse 40 photos</button>
+      <p class="hint">Using 7 cores. About 2 seconds.</p>
+    </div>
+  </div>
+
+  <div class="prog">
+    <div class="prog-r"><span>Looking for faces</span><span class="mono">27 / 40</span></div>
+    <div class="meter"><span style="width:68%"></span></div>
+    <ul class="stagelist">
+      <li class="ok"><span class="dot"></span><span>Measured quality</span><span class="t">0.7 s</span></li>
+      <li class="now"><span class="dot"></span><span>Looking for faces</span><span class="t">27 / 40</span></li>
+      <li><span class="dot"></span><span>Scoring against the batch</span><span class="t"></span></li>
+      <li><span class="dot"></span><span>Naming faults</span><span class="t"></span></li>
+      <li><span class="dot"></span><span>Finding near-duplicates</span><span class="t"></span></li>
+    </ul>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">MERGED</span>Four engine operations live in this one step: measure quality, detect faces, score, and name faults. <strong>None of them has a decision in it</strong> &mdash; they are computation. Four separate steps with nothing but a Next button would be worse than one step with a progress list.</p>
+    <p>The stage list is worth keeping: it is how you tell a slow batch from a stuck one.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="2">&larr; Back to straighten</button>
+    <button class="btn btn-p btn-big" data-go="4">Review duplicates &rarr;</button>
+  </div>
+</section>
+
+<!-- ======================= 4 DUPLICATES ======================= -->
+<section class="panel" data-step="4" hidden>
+  <div class="head">
+    <h1>Near-duplicates</h1>
+    <p class="lede">
+      Frames that are nearly the same photograph. The strongest of each pair is
+      kept by default &mdash; change any of them.
+    </p>
+  </div>
+
+  <div class="opts" style="grid-template-columns:1fr auto">
+    <div class="opt">
+      <label for="thr">How alike counts as a duplicate</label>
+      <div class="sl-row">
+        <input class="sl" type="range" id="thr" min="10" max="120" value="60">
+        <span class="sl-val">60</span>
+      </div>
+      <p class="hint">Hamming distance on a 256-bit perceptual hash. Lower is stricter. 60 is the current default; above about 100 genuinely different poses start merging.</p>
+    </div>
+    <div class="opt" style="display:flex;flex-direction:column;justify-content:center;gap:8px">
+      <button class="btn btn-d">Discard all 2 duplicates</button>
+      <button class="btn btn-q btn-sm">Keep everything</button>
+    </div>
+  </div>
+
+  <div class="sect-h"><h2 class="sect-t">2 pairs found in 40 photos</h2>
+    <p class="sect-n">Discarded frames stay on disk. They are removed from the ranking, not deleted.</p></div>
+
+  <div class="dups">
+    <div class="dup">
+      <div class="dup-h">
+        <h3 class="dup-t">Pair 1 &mdash; shot 3</h3>
+        <span class="dup-meta mono">distance 12 of 256 &nbsp;&middot;&nbsp; very alike</span>
+      </div>
+      <div class="dup-row">
+        <div class="dup-item keep">
+          <div class="ph land"><span>7Y4A3404</span><span class="tab">71.2</span></div>
+          <div class="dn-line">#4 &nbsp; score 71.2 &nbsp; sharper</div>
+          <div class="pickrow"><button class="chip-b on">Keep</button><button class="chip-b off">Discard</button></div>
+        </div>
+        <div class="dup-item toss">
+          <div class="ph land"><span>7Y4A3410</span><span class="tab">71.8</span></div>
+          <div class="dn-line">#2 &nbsp; score 71.8 &nbsp; grainier</div>
+          <div class="pickrow"><button class="chip-b">Keep</button><button class="chip-b off on">Discard</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dup">
+      <div class="dup-h">
+        <h3 class="dup-t">Pair 2 &mdash; shot 5</h3>
+        <span class="dup-meta mono">distance 41 of 256 &nbsp;&middot;&nbsp; alike</span>
+      </div>
+      <div class="dup-row">
+        <div class="dup-item keep">
+          <div class="ph land"><span>7Y4A3398</span><span class="tab">71.1</span></div>
+          <div class="dn-line">#5 &nbsp; score 71.1 &nbsp; kept</div>
+          <div class="pickrow"><button class="chip-b on">Keep</button><button class="chip-b off">Discard</button></div>
+        </div>
+        <div class="dup-item toss">
+          <div class="ph land"><span>7Y4A3392</span><span class="tab">65.8</span></div>
+          <div class="dn-line">#11 &nbsp; score 65.8 &nbsp; face not in focus</div>
+          <div class="pickrow"><button class="chip-b">Keep</button><button class="chip-b off on">Discard</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">NEW BEHAVIOUR</span>This is the only step that needs engine work. Near-duplicates are already <em>identified</em> &mdash; <code>is_duplicate</code>, at a distance of 60 or less &mdash; and already kept out of the selects, but <strong>nothing currently removes them from the batch</strong>.</p>
+    <p>Note pair 1: the frame scoring <em>higher</em> is the one proposed for discard, because it is grainier and its partner is sharper where it matters. That is exactly why this needs a human and a side-by-side view rather than an automatic rule.</p>
+  </div>
+
+  <div class="dn warn">
+    <h4>Open question for you</h4>
+    <p>If a batch has no duplicates at all, should this step be skipped automatically or shown empty saying "none found"? I would show it empty &mdash; a step that disappears makes people wonder what they missed.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="3">&larr; Back to analyse</button>
+    <button class="btn btn-p btn-big" data-go="5">Choose selects &rarr;</button>
+  </div>
+</section>
+
+<!-- ======================= 5 SHORTLIST ======================= -->
+<section class="panel" data-step="5" hidden>
+  <div class="head">
+    <h1>Shortlist</h1>
+    <p class="lede">
+      One frame from each distinct shot, strongest first, so the selects are
+      different photographs rather than one pose repeated.
+    </p>
+  </div>
+
+  <div class="opts">
+    <div class="opt">
+      <label>How many selects</label>
+      <div class="stepn"><button>&minus;</button><input value="6"><button>+</button></div>
+      <p class="hint">Spread across shots, not simply the top six scores.</p>
+    </div>
+    <div class="opt">
+      <label>Set aside the weakest</label>
+      <div class="stepn"><button>&minus;</button><input value="0"><button>+</button></div>
+      <p class="hint">Removed before ranking, so a weak frame cannot influence which of its neighbours gets picked. Listed, never deleted.</p>
+    </div>
+    <div class="opt">
+      <label>Grouping</label>
+      <div class="sl-row"><input class="sl" type="range" min="20" max="200" value="100"><span class="sl-val">100</span></div>
+      <p class="hint">How alike two frames must be to count as the same shot. 38 shots at this setting.</p>
+    </div>
+  </div>
+
+  <ul class="stats" style="margin-top:20px">
+    <li><div class="f">38</div><div class="c">frames kept</div></li>
+    <li><div class="f">31</div><div class="c">distinct shots</div></li>
+    <li><div class="f">6</div><div class="c">selects</div></li>
+    <li><div class="f">21</div><div class="c">clean</div></li>
+    <li class="warn"><div class="f">17</div><div class="c">with faults</div></li>
+  </ul>
+
+  <div class="sect-h"><h2 class="sect-t">The six selects</h2>
+    <p class="sect-n">Swap any of them for another frame from the same shot.</p></div>
+
+  <div class="grid grid-w">
+    <article class="card sel"><div class="ph port"><span class="pin gold">1</span><span class="tab">77.5</span><span class="flagpill">Select</span><span class="shapepill">Tall</span><span>7Y4A3156</span></div>
+      <div class="card-m"><div class="fn">7Y4A3156.JPG</div><div class="state clean">Clean, face in focus</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px">Swap &mdash; 1 other frame</button></div></article>
+    <article class="card sel"><div class="ph land"><span class="pin">2</span><span class="tab">71.8</span><span class="flagpill">Select</span><span class="shapepill">Wide</span><span>7Y4A3410</span></div>
+      <div class="card-m"><div class="fn">7Y4A3410.JPG</div><div class="state minor">Grainy</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px">Swap &mdash; 2 other frames</button></div></article>
+    <article class="card sel"><div class="ph land"><span class="pin">3</span><span class="tab">71.6</span><span class="flagpill">Select</span><span class="shapepill">Wide</span><span>7Y4A3195</span></div>
+      <div class="card-m"><div class="fn">7Y4A3195.JPG</div><div class="state clean">Clean, 2 faces</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px">Swap &mdash; no alternatives</button></div></article>
+    <article class="card sel"><div class="ph land"><span class="pin">4</span><span class="tab">71.1</span><span class="flagpill">Select</span><span class="shapepill">Wide</span><span>7Y4A3398</span></div>
+      <div class="card-m"><div class="fn">7Y4A3398.JPG</div><div class="state minor">Grainy +1 more</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px">Swap &mdash; 1 other frame</button></div></article>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">REARRANGED</span>Every control here already exists &mdash; selects count, set-aside count, grouping threshold. They are currently scattered across the Analyse and Review screens. <strong>Gathering them next to the result they affect is the whole point of this step.</strong></p>
+    <p>The Swap button is new and small: the alternatives are already computed as the other members of each shot bundle.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="4">&larr; Back to duplicates</button>
+    <button class="btn btn-p btn-big" data-go="6">Format for output &rarr;</button>
+  </div>
+</section>
+
+<!-- ======================= 6 FORMAT ======================= -->
+<section class="panel" data-step="6" hidden>
+  <div class="head">
+    <h1>Format</h1>
+    <p class="lede">
+      Convert to a vertical format for reels and stories. Optional &mdash; skip it
+      to keep every frame as shot.
+    </p>
+  </div>
+
+  <div class="sect-h"><h2 class="sect-t">How to handle wide frames</h2>
+    <p class="sect-n">25 of your 40 frames are landscape. A 3:2 frame cannot become 9:16 without either padding or cropping &mdash; there is no third option.</p></div>
+
+  <div class="fmt">
+    <div class="fmt-card on">
+      <h4>Fill &mdash; keep everything</h4>
+      <div class="fmt-stage"><div class="fmt-wash"></div><div class="fmt-inner">the whole photo</div></div>
+      <div class="fmt-kept good">100% kept</div>
+      <p class="fmt-note">The frame sits whole on a 9:16 canvas. The surround is a blurred wash of the photo's own colours.</p>
+    </div>
+    <div class="fmt-card">
+      <h4>Crop &mdash; fill the frame</h4>
+      <div class="fmt-stage"><div class="fmt-full">centre strip only</div></div>
+      <div class="fmt-kept lossy">38% kept</div>
+      <p class="fmt-note">Edge to edge with no padding, centred on the faces. 62% of the width is discarded.</p>
+    </div>
+    <div class="fmt-card">
+      <h4>Leave as shot</h4>
+      <div class="fmt-stage" style="aspect-ratio:3/2;margin-top:34px"><div class="fmt-full">3:2 unchanged</div></div>
+      <div class="fmt-kept good">100% kept</div>
+      <p class="fmt-note">No conversion. Portrait frames are already vertical and may not need this at all.</p>
+    </div>
+  </div>
+
+  <div class="opts" style="margin-top:22px">
+    <div class="opt">
+      <label>Apply to</label>
+      <label class="sw"><input type="checkbox" checked><span class="tr"></span><span>The 6 selects only</span></label>
+      <label class="sw"><input type="checkbox"><span class="tr"></span><span>All 38 kept frames</span></label>
+    </div>
+    <div class="opt">
+      <label>Output height</label>
+      <div class="stepn"><button>&minus;</button><input value="1920"><button>+</button></div>
+      <p class="hint">1920 keeps detail crisp on a phone without huge files.</p>
+    </div>
+    <div class="opt" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:9px">
+      <button class="btn btn-p btn-big">Convert 6 frames</button>
+      <p class="hint">Written as new files alongside. Nothing is overwritten.</p>
+    </div>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">CODE EXISTS</span>The converter shipped in v0.03 with both modes, and is tested. <strong>Nothing is wired to the UI yet.</strong></p>
+    <p><strong>Why this step must come after Analyse, not before.</strong> The Fill mode adds a large blurred wash around the frame. If that ran before measurement, the wash would be measured <em>as part of the photograph</em> &mdash; dragging down sharpness and contrast and corrupting every score in the batch. Format has to be an export operation.</p>
+    <p>To be clear about what Fill is not: it does <strong>not</strong> invent more floor, wall or sky. That is generative outpainting and needs a generative model; this runs on OpenCV offline. It is a backdrop derived from the photo's own colours.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="5">&larr; Back to shortlist</button>
+    <button class="btn btn-p btn-big" data-go="7">Finish &rarr;</button>
+  </div>
+</section>
+
+<!-- ======================= 7 REVIEW ======================= -->
+<section class="panel" data-step="7" hidden>
+  <div class="head row-b">
+    <div><h1>Review</h1></div>
+    <div style="display:flex;gap:10px"><a class="btn btn-q" href="#">Ranking CSV</a><a class="btn btn-p" href="#">Download selects</a></div>
+  </div>
+
+  <h2 class="sect-t">Top frame</h2>
+  <div class="feat">
+    <div class="ph port" style="border-radius:var(--r-sm)"><span class="pin gold">BEST OF 38</span><span class="shapepill">Tall</span><span>7Y4A3156</span></div>
+    <div>
+      <div class="big-score">77.5<small> / 100</small></div>
+      <div class="fn" style="margin-top:12px;font-size:13px">7Y4A3156.JPG</div>
+      <div class="hint">4000&times;6000 &middot; portrait &middot; 1 face</div>
+      <ul class="verdict">
+        <li><span class="pip clean"></span><span><span class="what">Nothing wrong found. </span><span class="why">No measurement came out poorly.</span></span></li>
+      </ul>
+      <div class="bars">
+        <div class="bar"><span>Sharpness</span><span class="tr"><span class="fl hi" style="width:84%"></span></span><span class="v">84</span></div>
+        <div class="bar"><span>Exposure</span><span class="tr"><span class="fl hi" style="width:79%"></span></span><span class="v">79</span></div>
+        <div class="bar"><span>Contrast</span><span class="tr"><span class="fl" style="width:61%"></span></span><span class="v">61</span></div>
+        <div class="bar"><span>Colour</span><span class="tr"><span class="fl" style="width:58%"></span></span><span class="v">58</span></div>
+        <div class="bar"><span>Low noise</span><span class="tr"><span class="fl hi" style="width:88%"></span></span><span class="v">88</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect-h row-b">
+    <div><h2 class="sect-t">Every frame, best to worst</h2><p class="sect-n">Showing all 38</p></div>
+    <div class="toolbar">
+      <div class="seg-g"><button class="seg on">All</button><button class="seg">Clean</button><button class="seg">Faults</button><button class="seg">Selects</button></div>
+      <div class="seg-g"><button class="seg">Grid</button><button class="seg on">Table</button></div>
+      <div class="seg-g"><button class="seg on">Fill</button><button class="seg">Fit</button></div>
+    </div>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th class="num">#</th><th>Frame</th><th class="num">Score</th><th class="num">Shot</th><th class="num">Faces</th><th>Shape</th><th>Condition</th></tr></thead>
+      <tbody>
+        <tr class="sel"><td class="num">1</td><td><div class="cell"><div class="ph port"><span></span></div><span class="fn">7Y4A3156.JPG</span></div></td><td class="num">77.5</td><td class="num">1</td><td class="num">1</td><td><span class="tag clean">Tall</span></td><td><span class="tag clean">Clean</span></td></tr>
+        <tr class="sel"><td class="num">2</td><td><div class="cell"><div class="ph land"><span></span></div><span class="fn">7Y4A3410.JPG</span></div></td><td class="num">71.8</td><td class="num">2</td><td class="num">2</td><td><span class="tag minor">Wide</span></td><td><span class="tag minor">Grainy</span></td></tr>
+        <tr class="sel"><td class="num">3</td><td><div class="cell"><div class="ph land"><span></span></div><span class="fn">7Y4A3195.JPG</span></div></td><td class="num">71.6</td><td class="num">3</td><td class="num">2</td><td><span class="tag minor">Wide</span></td><td><span class="tag clean">Clean</span></td></tr>
+        <tr><td class="num">4</td><td><div class="cell"><div class="ph land"><span></span></div><span class="fn">7Y4A3152.JPG</span></div></td><td class="num">70.7</td><td class="num">4</td><td class="num">2</td><td><span class="tag minor">Wide</span></td><td><span class="tag clean">Clean</span></td></tr>
+        <tr><td class="num">5</td><td><div class="cell"><div class="ph port"><span></span></div><span class="fn">7Y4A3218.JPG</span></div></td><td class="num">60.6</td><td class="num">5</td><td class="num">2</td><td><span class="tag clean">Tall</span></td><td><span class="tag minor">Head turned away</span></td></tr>
+        <tr><td class="num">6</td><td><div class="cell"><div class="ph land"><span></span></div><span class="fn">7Y4A3320.JPG</span></div></td><td class="num">53.1</td><td class="num">6</td><td class="num">3</td><td><span class="tag minor">Wide</span></td><td><span class="tag major">Face in shadow</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dn">
+    <h4>Design note</h4>
+    <p><span class="flag">UNCHANGED</span>This is the v0.02 review screen. A <strong>Shape</strong> column is added to the table since orientation now varies, and the controls that moved to step 5 are gone from here.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-q" data-go="6">&larr; Back to format</button>
+    <button class="btn btn-q" data-go="1">Start a new batch</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p><strong>This is a mockup.</strong> No server, no uploads, no analysis. Placeholder tiles stand in for photographs; hatched boxes marked sideways represent the 15 frames stored rotated.</p>
+  <p>Numbers throughout are from the real 40-photo test batch so the layout is judged against realistic content.</p>
+  <p>Three things still need your decision &mdash; they are marked in amber on steps 2 and 4, and the third is whether Format should overwrite files or write alongside (shown here as write alongside).</p>
+</footer>
+
+<script>
+"use strict";
+
+var STEPS = [
+  { n: 1, label: "Add",        status: "done" },
+  { n: 2, label: "Straighten", status: "done" },
+  { n: 3, label: "Analyse",    status: "done" },
+  { n: 4, label: "Duplicates", status: "todo" },
+  { n: 5, label: "Shortlist",  status: "todo" },
+  { n: 6, label: "Format",     status: "todo" },
+  { n: 7, label: "Review",     status: "todo" }
+];
+
+var current = 1;
+
+function buildStepper() {
+  var nav = document.getElementById("stepper");
+  nav.innerHTML = "";
+  STEPS.forEach(function (step, i) {
+    if (i > 0) {
+      var sep = document.createElement("span");
+      sep.className = "stp-sep";
+      nav.appendChild(sep);
+    }
+    var b = document.createElement("button");
+    b.className = "stp" + (step.n === current ? " on" : "");
+    b.type = "button";
+    if (step.n === current) b.setAttribute("aria-current", "step");
+
+    var n = document.createElement("span");
+    n.className = "n";
+    n.textContent = step.n;
+
+    var l = document.createElement("span");
+    l.className = "lbl";
+    l.textContent = step.label;
+
+    b.appendChild(n);
+    b.appendChild(l);
+    b.addEventListener("click", function () { show(step.n); });
+    nav.appendChild(b);
+  });
+}
+
+function show(n) {
+  current = n;
+  var panels = document.querySelectorAll("[data-step]");
+  for (var i = 0; i < panels.length; i++) {
+    panels[i].hidden = Number(panels[i].dataset.step) !== n;
+  }
+  buildStepper();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.addEventListener("click", function (e) {
+  var t = e.target.closest ? e.target.closest("[data-go]") : null;
+  if (t) show(Number(t.dataset.go));
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight" && current < STEPS.length) show(current + 1);
+  if (e.key === "ArrowLeft" && current > 1) show(current - 1);
+});
+
+// Live readout on the sliders, so the mockup feels like the real thing.
+document.querySelectorAll(".sl").forEach(function (slider) {
+  slider.addEventListener("input", function () {
+    var out = slider.parentElement.querySelector(".sl-val");
+    if (out) out.textContent = slider.value;
+  });
+});
+
+buildStepper();
+show(1);
+</script>
+</body>
+</html>

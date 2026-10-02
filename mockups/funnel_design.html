@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Studio &mdash; funnel design (v3 mockup)</title>
+<style>
+/* ==========================================================================
+   FUNNEL MOCKUP v3 - DESIGN ONLY, NOTHING IS WIRED UP
+   Every step removes photos. The count narrows. The last step holds one frame.
+   Any photo can be KEPT at any stage, which protects it from every later step.
+   Counts come from the real 40-photo batch, including the inconvenient ones.
+   Step 5 (expressions) is NOT BUILT and is marked as such throughout.
+   ========================================================================== */
+:root{
+  --paper:#fbfaf8; --card:#fff; --sunk:#f4f2ee; --rule:#e4e0d8; --rule-s:#d2ccc0;
+  --ink:#1c1a17; --ink-soft:#5c564d; --ink-faint:#8d867a;
+  --accent:#a8562f; --accent-soft:#f6ece6;
+  --major:#a33a32; --major-soft:#fbeae8;
+  --minor:#8a6420; --minor-soft:#fbf2e0;
+  --clean:#3d6b45; --clean-soft:#ebf3ec;
+  --note:#2f5d8a; --note-soft:#eaf1f8;
+  --keep:#1f6f8b; --keep-soft:#e6f2f6;
+  --nb:#6b3fa0; --nb-soft:#f1ebfa;
+  --r:12px; --r-sm:8px;
+  --shadow:0 1px 2px rgba(28,26,23,.05),0 8px 24px rgba(28,26,23,.05);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.shell{max-width:1280px;margin:0 auto;padding:0 26px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.mock{background:#2b2724;color:#f3efe9;padding:9px 0;font-size:13px}
+.mock .shell{display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+.mock .t{background:rgba(255,255,255,.14);padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.05em}
+.mock b{color:#e8b887}
+
+/* ---------- top ---------- */
+.top{position:sticky;top:0;z-index:30;background:rgba(251,250,248,.94);backdrop-filter:blur(10px) saturate(160%);border-bottom:1px solid var(--rule)}
+.top-in{display:flex;align-items:center;justify-content:space-between;gap:16px;height:58px}
+.brand{display:flex;align-items:center;gap:10px}
+.mk{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#d08a52)}
+.bn{font-weight:650;letter-spacing:-.01em}
+.live{display:flex;align-items:center;gap:16px;font-size:13px;color:var(--ink-soft)}
+.live .big{font:700 19px var(--mono);color:var(--ink)}
+.kept-chip{display:inline-flex;align-items:center;gap:6px;background:var(--keep-soft);color:var(--keep);
+  border:1px solid #c5dde5;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:650}
+.kept-chip .pinico{font-size:11px}
+
+/* ---------- rail ---------- */
+.rail{border-bottom:1px solid var(--rule);background:var(--card)}
+.rail-in{display:flex;overflow-x:auto}
+.rl{flex:1 1 0;min-width:104px;border:0;background:none;cursor:pointer;padding:11px 9px 10px;
+    text-align:left;border-right:1px solid var(--rule);position:relative;font:inherit}
+.rl:last-child{border-right:0}
+.rl:hover{background:var(--sunk)}
+.rl .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.rl .nm{font-size:12.5px;font-weight:600;margin-top:2px;color:var(--ink-soft)}
+.rl .ct{font:700 16px var(--mono);margin-top:3px;color:var(--ink)}
+.rl .dl{font-size:10.5px;font-weight:650;margin-top:1px;color:var(--ink-faint)}
+.rl .dl.cut{color:var(--major)}
+.rl.on{background:var(--accent-soft)}
+.rl.on .nm{color:var(--accent)}
+.rl.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--accent)}
+.rl.nb .nm{color:var(--nb)}
+.rl .nbt{position:absolute;top:5px;right:6px;background:var(--nb);color:#fff;font-size:8px;
+  font-weight:800;letter-spacing:.04em;padding:1px 5px;border-radius:99px}
+
+/* ---------- panels ---------- */
+.panel{padding:32px 0 20px}
+h1{font-size:28px;line-height:1.2;margin:0 0 7px;letter-spacing:-.022em;font-weight:660}
+.lede{margin:0;color:var(--ink-soft);max-width:68ch}
+.head{margin-bottom:20px}
+
+/* ---------- tally ---------- */
+.tally{display:flex;align-items:center;gap:20px;background:var(--card);border:1px solid var(--rule);
+  border-radius:var(--r);padding:17px 22px;margin-bottom:22px;box-shadow:var(--shadow);flex-wrap:wrap}
+.tally .blk{text-align:center}
+.tally .n{font:700 32px var(--mono);line-height:1;letter-spacing:-.02em}
+.tally .l{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:700;margin-top:4px}
+.tally .arw{font-size:22px;color:var(--ink-faint)}
+.tally .cut .n{color:var(--major)}
+.tally .out .n{color:var(--clean)}
+.tally .kp .n{color:var(--keep)}
+.tally .why{flex:1 1 210px;font-size:13px;color:var(--ink-soft);border-left:1px solid var(--rule);padding-left:20px}
+@media(max-width:760px){.tally .why{border-left:0;padding-left:0}}
+
+.fbar{height:9px;border-radius:99px;background:var(--sunk);overflow:hidden;display:flex;margin-top:12px}
+.fbar span{display:block;height:100%}
+.fbar .keepb{background:var(--clean)} .fbar .dropb{background:var(--major)} .fbar .lockb{background:var(--keep)}
+.fkey{display:flex;gap:14px;font-size:11px;color:var(--ink-faint);margin-top:6px;flex-wrap:wrap}
+.fkey i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.fkey .a i{background:var(--clean)} .fkey .b i{background:var(--major)} .fkey .c i{background:var(--keep)}
+
+/* ---------- reasons ---------- */
+.reasons{display:grid;gap:9px;background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:19px;box-shadow:var(--shadow)}
+.rsn{display:grid;grid-template-columns:28px 1fr auto 84px;gap:13px;align-items:center;font-size:14px}
+.rsn input{width:17px;height:17px;accent-color:var(--major);cursor:pointer}
+.rsn .lbl{font-weight:560}
+.rsn .sub{font-size:11.5px;color:var(--ink-faint);font-weight:400}
+.rsn .bar{height:7px;background:var(--sunk);border-radius:99px;overflow:hidden;min-width:64px}
+.rsn .bar>span{display:block;height:100%;background:var(--major)}
+.rsn .bar.min>span{background:var(--minor)}
+.rsn .bar.nbb>span{background:var(--nb)}
+.rsn .ct{font:700 12.5px var(--mono);text-align:right;color:var(--ink-soft)}
+.rsn.off{opacity:.42}
+
+/* ---------- placeholders ---------- */
+.ph{position:relative;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;display:grid;place-items:center;color:var(--ink-faint);font:11px var(--mono);text-align:center}
+.ph::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 9px,rgba(0,0,0,.022) 9px,rgba(0,0,0,.022) 18px)}
+.ph s{position:relative;z-index:1;padding:4px;text-decoration:none}
+.ph.land{aspect-ratio:3/2} .ph.port{aspect-ratio:2/3}
+.ph.rot s{transform:rotate(-90deg);white-space:nowrap}
+.pin{position:absolute;top:6px;left:6px;background:rgba(28,26,23,.8);color:#fff;font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2}
+.pin.gold{background:var(--accent)}
+.tab{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.94);font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.emo{position:absolute;bottom:6px;left:6px;background:rgba(107,63,160,.9);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:99px;z-index:2}
+.xmark{position:absolute;inset:0;background:rgba(163,58,50,.17);z-index:3;display:grid;place-items:center}
+.xmark b{background:var(--major);color:#fff;font-size:11px;font-weight:700;letter-spacing:.05em;padding:4px 11px;border-radius:99px;text-transform:uppercase}
+.lockmark{position:absolute;inset:0;background:rgba(31,111,139,.14);z-index:3;display:grid;place-items:start end;padding:7px}
+.lockmark b{background:var(--keep);color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;padding:3px 9px;border-radius:99px;text-transform:uppercase}
+
+/* ---------- grids ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(166px,1fr));gap:13px}
+.grid-w{grid-template-columns:repeat(auto-fill,minmax(236px,1fr))}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.card.cut{border-color:#eccfca}
+.card.locked{border-color:var(--keep);box-shadow:0 0 0 2px var(--keep-soft),var(--shadow)}
+.card.sel{border-color:var(--accent)}
+.cm{padding:9px 11px 11px}
+.fn{font:10.5px var(--mono);color:var(--ink-faint);word-break:break-all;margin-bottom:3px}
+.st{font-size:12px;font-weight:620}
+.st.major{color:var(--major)} .st.minor{color:var(--minor)} .st.clean{color:var(--clean)} .st.keep{color:var(--keep)} .st.nb{color:var(--nb)}
+
+/* ---------- keep button ---------- */
+.keepbtn{margin-top:8px;width:100%;font:inherit;font-size:12px;font-weight:650;padding:6px 10px;
+  border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink-soft);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.keepbtn:hover{border-color:var(--keep);color:var(--keep)}
+.keepbtn.on{background:var(--keep);border-color:var(--keep);color:#fff}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-block;font:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none;text-align:center}
+.btn:hover{border-color:var(--ink-faint)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-p:hover{background:#964926}
+.btn-q{background:transparent}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-big{padding:13px 24px;font-size:15px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:32px;padding-top:20px;border-top:1px solid var(--rule)}
+
+/* ---------- notes ---------- */
+.dn{background:var(--note-soft);border:1px solid #d3e2f0;border-left:3px solid var(--note);border-radius:var(--r-sm);padding:14px 16px;margin:20px 0}
+.dn h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--note);font-weight:700}
+.dn p{margin:0 0 7px;font-size:13.5px;color:#2c4a66;line-height:1.55}
+.dn p:last-child{margin:0}
+.dn code{font:12px var(--mono);background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #d3e2f0}
+.dn .f{display:inline-block;background:var(--note);color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:99px;margin-right:7px;vertical-align:1px}
+.dn ul{margin:6px 0 0;padding-left:20px}
+.dn li{font-size:13px;color:#2c4a66;margin-bottom:4px;line-height:1.5}
+.dn.warn{background:var(--minor-soft);border-color:#f0e2c4;border-left-color:var(--minor)}
+.dn.warn h4,.dn.warn p,.dn.warn li{color:#6d4f19} .dn.warn .f{background:var(--minor)} .dn.warn code{border-color:#f0e2c4}
+.dn.build{background:var(--nb-soft);border-color:#dfd2f0;border-left-color:var(--nb)}
+.dn.build h4,.dn.build p,.dn.build li{color:#4a2b71} .dn.build .f{background:var(--nb)} .dn.build code{border-color:#dfd2f0}
+.dn.keepn{background:var(--keep-soft);border-color:#c5dde5;border-left-color:var(--keep)}
+.dn.keepn h4,.dn.keepn p,.dn.keepn li{color:#15505f} .dn.keepn .f{background:var(--keep)} .dn.keepn code{border-color:#c5dde5}
+
+.empty{background:var(--clean-soft);border:1px solid #cfe0d2;border-radius:var(--r);padding:30px 24px;text-align:center}
+.empty .big{font-size:18px;font-weight:650;color:#2f5538;margin:0 0 6px}
+.empty p{margin:0;font-size:13.5px;color:#3d6b45}
+
+.ctl{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+.ctl label{display:block;font-size:13px;font-weight:620;margin-bottom:9px}
+.srow{display:grid;grid-template-columns:1fr 88px;gap:16px;align-items:center}
+.sl{width:100%;accent-color:var(--accent)}
+.sv{font:700 15px var(--mono);color:var(--accent);text-align:right}
+.hint{margin:9px 0 0;font-size:12.5px;color:var(--ink-faint);line-height:1.5}
+
+.dups{display:grid;gap:13px}
+.dup{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:15px 17px;box-shadow:var(--shadow)}
+.dh{display:flex;justify-content:space-between;gap:12px;margin-bottom:11px;flex-wrap:wrap;align-items:baseline}
+.dh h3{margin:0;font-size:14px;font-weight:640}
+.dh .m{font-size:12px;color:var(--ink-faint)}
+.drow{display:flex;gap:11px;flex-wrap:wrap}
+.di{width:142px}
+.di .ph{margin-bottom:6px}
+.di .l{font:10px var(--mono);color:var(--ink-faint);margin-bottom:5px}
+.pick{display:flex;gap:4px}
+.cb{font:inherit;font-size:11px;font-weight:620;padding:4px 9px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);cursor:pointer;color:var(--ink-soft)}
+.cb.on{background:var(--clean);border-color:var(--clean);color:#fff}
+.cb.x.on{background:var(--major);border-color:var(--major)}
+
+.winner{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.85fr);gap:24px;background:var(--card);border:2px solid var(--accent);border-radius:var(--r);padding:20px;box-shadow:0 0 0 4px var(--accent-soft),var(--shadow)}
+@media(max-width:860px){.winner{grid-template-columns:1fr}}
+.bs{font:700 54px/1 var(--sans);letter-spacing:-.035em}
+.bs small{font-size:17px;font-weight:600;color:var(--ink-faint)}
+.vl{list-style:none;margin:13px 0 0;padding:0;display:grid;gap:8px}
+.vl li{display:grid;grid-template-columns:9px 1fr;gap:10px;font-size:13.5px}
+.vl .p{width:9px;height:9px;border-radius:50%;margin-top:7px;background:var(--clean)}
+.vl .w{font-weight:640} .vl .y{color:var(--ink-soft)}
+.mb{margin-top:13px;display:grid;gap:6px}
+.mr{display:grid;grid-template-columns:68px 1fr 26px;gap:9px;align-items:center;font-size:11.5px;color:var(--ink-soft)}
+.mr .t{height:5px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.mr .f{display:block;height:100%;background:var(--ink-faint)} .mr .f.hi{background:var(--clean)}
+.mr .v{text-align:right;font:11px var(--mono);color:var(--ink-faint)}
+.journey{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:4px;font-size:13px}
+.journey li{display:grid;grid-template-columns:26px 1fr auto;gap:12px;align-items:center;color:var(--ink-soft);padding:3px 0}
+.journey .n{font:700 12px var(--mono);color:var(--ink-faint);text-align:right}
+.journey .c{font:700 12px var(--mono);color:var(--ink)}
+.journey li.nbl{color:var(--nb)}
+.journey li.kl{color:var(--keep)}
+
+.sect-t{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:680;margin:32px 0 6px}
+.sect-n{margin:0 0 15px;font-size:14px;color:var(--ink-soft);max-width:72ch}
+.nbbanner{background:var(--nb-soft);border:1px solid #dfd2f0;border-radius:var(--r);padding:16px 20px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start}
+.nbbanner .lab{background:var(--nb);color:#fff;font-size:10px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:99px;flex:0 0 auto;margin-top:2px}
+.nbbanner p{margin:0;font-size:13.5px;color:#4a2b71;line-height:1.55}
+footer{border-top:1px solid var(--rule);margin-top:44px;padding:26px 26px 54px}
+footer p{margin:0 0 7px;font-size:13px;color:var(--ink-soft);max-width:78ch}
+</style>
+</head>
+<body>
+
+<div class="mock"><div class="shell">
+  <span><span class="t">MOCKUP v3</span> &nbsp;The funnel, with expression detection and a keep option on every step.</span>
+  <span><b>mockups/funnel_design.html</b></span>
+</div></div>
+
+<header class="top"><div class="shell top-in">
+  <div class="brand"><span class="mk"></span><span class="bn">Photo Studio</span></div>
+  <div class="live">
+    <span><span class="big" id="liveN">40</span> <span style="color:var(--ink-faint)">still in</span></span>
+    <span class="kept-chip"><span class="pinico">&#128204;</span><span id="keptN">0</span> kept by you</span>
+  </div>
+</div></header>
+
+<nav class="rail"><div class="shell"><div class="rail-in" id="rail"></div></div></nav>
+
+<main class="shell">
+
+<!-- ================= 1 ADD ================= -->
+<section class="panel" data-s="1">
+  <div class="head"><h1>1 &middot; Add the shoot</h1>
+    <p class="lede">Everything starts here. From now on each step takes photos <em>out</em>. Nothing is ever added back, and nothing is deleted from your drive.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">&mdash;</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">40</div><div class="l">after</div></div>
+    <div class="why">40 photos, 286 MB. Nothing removed yet.</div>
+  </div>
+
+  <div class="grid">
+    <article class="card"><div class="ph rot land"><s>7Y4A3139</s></div><div class="cm"><div class="fn">7Y4A3139.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3146</s></div><div class="cm"><div class="fn">7Y4A3146.JPG</div><div class="st">upright</div></div></article>
+    <article class="card"><div class="ph rot land"><s>7Y4A3156</s></div><div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3162</s></div><div class="cm"><div class="fn">7Y4A3162.JPG</div><div class="st">upright</div></div></article>
+    <article class="card"><div class="ph rot land"><s>7Y4A3168</s></div><div class="cm"><div class="fn">7Y4A3168.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3195</s></div><div class="cm"><div class="fn">7Y4A3195.JPG</div><div class="st">upright</div></div></article>
+  </div>
+
+  <div class="dn keepn"><h4>The keep button, on every step</h4>
+    <p><span class="f">NEW</span>From step 3 onward every photo carries a <strong>Keep</strong> button. Pressing it <strong>protects that photo from every later step</strong> &mdash; it cannot be removed as a duplicate, as unusable, as weak, or by the one-per-moment rule.</p>
+    <p>The count of kept photos sits in the header throughout, and they are listed on the final screen. This is the escape hatch: if you disagree with the engine about one frame, you say so once and it stops arguing.</p></div>
+
+  <div class="nav"><span></span><button class="btn btn-p btn-big" data-go="2">Next: fix sideways photos &rarr;</button></div>
+</section>
+
+<!-- ================= 2 STRAIGHTEN ================= -->
+<section class="panel" data-s="2" hidden>
+  <div class="head"><h1>2 &middot; Fix sideways photos</h1>
+    <p class="lede">The only step that removes nothing. It rotates frames so heads sit at the top.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">40</div><div class="l">after</div></div>
+    <div class="why"><strong>15 rotated, none removed.</strong> Quarter turns only &mdash; nothing cropped, stretched or re-sharpened.</div>
+  </div>
+
+  <h2 class="sect-t">The 15 that were turned</h2>
+  <p class="sect-n">Rotation is judged from face detection, so it can be wrong. Override any frame.</p>
+
+  <div class="grid">
+    <article class="card"><div class="ph port"><s>7Y4A3156</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3168</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3168.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3218</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3218.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3283</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3283.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+  </div>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">BUILT &amp; TESTED</span>Shipped in v0.03. Only the screen and the manual override are new.</p>
+    <p>No EXIF to read &mdash; all 40 files report <code>orientation: 1</code>, including the sideways ones. Rotation is inferred by running the face detector at four quarter turns and taking the most confident. <strong>A frame with no face is deliberately left alone</strong>, so a sideways shot of the venue or the rings will not be corrected automatically.</p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="1">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="3">Next: remove duplicates &rarr;</button></div>
+</section>
+
+<!-- ================= 3 DUPLICATES ================= -->
+<section class="panel" data-s="3" hidden>
+  <div class="head"><h1>3 &middot; Remove duplicates</h1>
+    <p class="lede">Frames that are nearly the same photograph. Only one of each needs to survive.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n">0</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">40</div><div class="l">after</div></div>
+    <div class="why"><strong>No duplicates found in this batch.</strong> The step still appears, so you know it ran.</div>
+  </div>
+
+  <div class="empty">
+    <p class="big">Nothing to remove here</p>
+    <p>No two frames in these 40 are alike enough to count as duplicates. Loosen the threshold below if you expected some.</p>
+  </div>
+
+  <div class="ctl" style="margin-top:18px">
+    <label for="dthr">How alike counts as a duplicate</label>
+    <div class="srow"><input class="sl" type="range" id="dthr" min="10" max="140" value="60" data-out="dthrv"><span class="sv" id="dthrv">60</span></div>
+    <p class="hint">Hamming distance on a 256-bit perceptual hash. Lower is stricter. At 60 nothing matched; above about 100 genuinely different poses start merging and you lose photographs you wanted.</p>
+  </div>
+
+  <h2 class="sect-t">What this looks like when pairs are found</h2>
+  <p class="sect-n">Example from a continuous burst. The keeper is proposed, never forced.</p>
+
+  <div class="dups">
+    <div class="dup">
+      <div class="dh"><h3>Pair &mdash; shot 3</h3><span class="m mono">distance 12 of 256 &middot; nearly identical</span></div>
+      <div class="drow">
+        <div class="di"><div class="ph land"><s>7Y4A3404</s><span class="tab">71.2</span></div>
+          <div class="l">score 71.2 &middot; sharper face</div>
+          <div class="pick"><button class="cb on">Keep</button><button class="cb x">Remove</button></div></div>
+        <div class="di"><div class="ph land"><s>7Y4A3410</s><span class="tab">71.8</span><span class="xmark"><b>remove</b></span></div>
+          <div class="l">score 71.8 &middot; grainier</div>
+          <div class="pick"><button class="cb">Keep</button><button class="cb x on">Remove</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dn warn"><h4>Read this one carefully</h4>
+    <p>The frame scoring <strong>higher</strong> (71.8) is proposed for removal, because it is grainier and its partner is sharper on the face. <strong>Score alone is the wrong rule for duplicates</strong>, which is why pairs are shown side by side rather than resolved automatically.</p></div>
+
+  <div class="dn"><h4>Why duplicates can come before analysis</h4>
+    <p><span class="f">MEASURED</span>Duplicate detection needs a perceptual hash, which needs the photo decoded. Decoding 40 photos takes <code>2.67s</code>; decoding <em>and</em> measuring every quality metric takes <code>3.01s</code>. The extra metrics cost 11%, because <strong>the decode dominates</strong>.</p>
+    <p>So there is no cheap duplicates-only pass worth building. The app scans once on entering this step &mdash; about half a second across 7 cores &mdash; caches it, and <strong>every later step is instant, including stepping backwards.</strong></p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="2">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="4">Next: remove unusable &rarr;</button></div>
+</section>
+
+<!-- ================= 4 UNUSABLE ================= -->
+<section class="panel" data-s="4" hidden>
+  <div class="head"><h1>4 &middot; Remove unusable photos</h1>
+    <p class="lede">Frames with a fault no editing can repair. Untick a fault to keep those frames, or keep individual photos below.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="u-cut">16</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="u-out">24</div><div class="l">after</div></div>
+    <div class="why">Each fault is independent. Counts are real measurements from your batch.
+      <div class="fbar"><span class="keepb" id="u-bk" style="width:60%"></span><span class="dropb" id="u-bd" style="width:40%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div>
+    </div>
+  </div>
+
+  <div class="reasons" id="u-reasons">
+    <div class="rsn"><span><input type="checkbox" checked data-n="9"></span>
+      <span><span class="lbl">Out of focus</span><br><span class="sub">Among the softest in the batch &mdash; cannot be sharpened back</span></span>
+      <span class="bar"><span style="width:100%"></span></span><span class="ct">9 photos</span></div>
+    <div class="rsn"><span><input type="checkbox" checked data-n="8"></span>
+      <span><span class="lbl">Face not in focus</span><br><span class="sub">Frame is sharp but focus landed behind the person</span></span>
+      <span class="bar"><span style="width:89%"></span></span><span class="ct">8 photos</span></div>
+    <div class="rsn"><span><input type="checkbox" checked data-n="3"></span>
+      <span><span class="lbl">Highlights blown out</span><br><span class="sub">Pure white areas &mdash; that detail is gone for good</span></span>
+      <span class="bar"><span style="width:33%"></span></span><span class="ct">3 photos</span></div>
+    <div class="rsn"><span><input type="checkbox" checked data-n="1"></span>
+      <span><span class="lbl">Face in shadow</span><br><span class="sub">Backlit &mdash; bright behind, face dark</span></span>
+      <span class="bar"><span style="width:11%"></span></span><span class="ct">1 photo</span></div>
+    <div class="rsn"><span><input type="checkbox" checked data-n="1"></span>
+      <span><span class="lbl">Washed out</span><br><span class="sub">Overall far too bright</span></span>
+      <span class="bar"><span style="width:11%"></span></span><span class="ct">1 photo</span></div>
+  </div>
+
+  <h2 class="sect-t">Being removed &mdash; keep any you disagree with</h2>
+  <p class="sect-n">A kept photo is protected from this step <em>and every step after it</em>. Removed frames stay on disk.</p>
+
+  <div class="grid" id="u-grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3355</s><span class="tab">55.4</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3355.JPG</div><div class="st major">Out of focus</div>
+      <button class="keepbtn" data-keep="7Y4A3355">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3320</s><span class="tab">53.1</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3320.JPG</div><div class="st major">Face in shadow</div>
+      <button class="keepbtn" data-keep="7Y4A3320">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3269</s><span class="tab">35.6</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3269.JPG</div><div class="st major">Highlights blown out</div>
+      <button class="keepbtn" data-keep="7Y4A3269">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph port"><s>7Y4A3248</s><span class="tab">19.2</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3248.JPG</div><div class="st major">Washed out</div>
+      <button class="keepbtn" data-keep="7Y4A3248">&#128204; Keep this photo</button></div></article>
+  </div>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">BUILT</span>All five faults are already measured and named by the engine. Only the per-fault toggles, this screen and the keep buttons are new.</p>
+    <p>Faults are listed separately rather than as one "16 unusable" number because they are not equally fatal. Blown highlights are unrecoverable; a backlit face can often be lifted in editing. One number would hide that.</p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="3">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="5">Next: check expressions &rarr;</button></div>
+</section>
+
+<!-- ================= 5 EXPRESSIONS ================= -->
+<section class="panel" data-s="5" hidden>
+  <div class="head"><h1>5 &middot; Check expressions</h1>
+    <p class="lede">Remove blinks and flat expressions. The frame can be perfect and still be the wrong moment.</p></div>
+
+  <div class="nbbanner">
+    <span class="lab">NOT BUILT</span>
+    <p><strong>This step does not exist in the code.</strong> Nothing in the engine reads expressions today &mdash; I searched the whole codebase for it. The two models on disk are YuNet (face detection) and SFace (identity), and neither can tell a smile from a grimace. This screen shows what it <em>would</em> look like, and what it would cost to build. Everything below is illustrative, not measured.</p>
+  </div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">24</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="e-cut">5</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="e-out">19</div><div class="l">after</div></div>
+    <div class="why">Illustrative counts.
+      <div class="fbar"><span class="keepb" id="e-bk" style="width:79%"></span><span class="dropb" id="e-bd" style="width:21%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div>
+    </div>
+  </div>
+
+  <div class="reasons" id="e-reasons">
+    <div class="rsn"><span><input type="checkbox" checked data-n="3"></span>
+      <span><span class="lbl">Eyes closed</span><br><span class="sub">Caught mid-blink &mdash; needs a <strong>fourth</strong> model, see below</span></span>
+      <span class="bar nbb"><span style="width:100%"></span></span><span class="ct">3 photos</span></div>
+    <div class="rsn"><span><input type="checkbox" checked data-n="2"></span>
+      <span><span class="lbl">Flat expression</span><br><span class="sub">Classified neutral where a reaction was expected</span></span>
+      <span class="bar nbb"><span style="width:67%"></span></span><span class="ct">2 photos</span></div>
+    <div class="rsn off"><span><input type="checkbox" data-n="4"></span>
+      <span><span class="lbl">Not smiling</span><br><span class="sub">Off by default &mdash; a serious portrait is not a fault</span></span>
+      <span class="bar nbb"><span style="width:133%"></span></span><span class="ct">4 photos</span></div>
+  </div>
+
+  <h2 class="sect-t">What the expression model would report</h2>
+  <p class="sect-n">Eight classes per face, strongest first. Badge shows the top class and its confidence.</p>
+
+  <div class="grid">
+    <article class="card"><div class="ph port"><s>7Y4A3156</s><span class="tab">77.5</span><span class="emo">happiness 0.91</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">Smiling, eyes open</div>
+      <button class="keepbtn" data-keep="7Y4A3156">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3192</s><span class="tab">58.8</span><span class="emo">neutral 0.74</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3192.JPG</div><div class="st nb">Eyes closed</div>
+      <button class="keepbtn" data-keep="7Y4A3192">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3204</s><span class="tab">53.2</span><span class="emo">neutral 0.88</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3204.JPG</div><div class="st nb">Flat expression</div>
+      <button class="keepbtn" data-keep="7Y4A3204">&#128204; Keep this photo</button></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3146</s><span class="tab">68.3</span><span class="emo">surprise 0.63</span></div>
+      <div class="cm"><div class="fn">7Y4A3146.JPG</div><div class="st clean">Reacting, eyes open</div>
+      <button class="keepbtn" data-keep="7Y4A3146">&#128204; Keep this photo</button></div></article>
+  </div>
+
+  <div class="dn build"><h4>What building this actually needs</h4>
+    <p><span class="f">MODEL 3</span><strong>Expressions.</strong> <code>emotion-ferplus</code> from the ONNX Model Zoo is the viable offline candidate. It takes a <strong>64&times;64 grayscale face crop</strong> and returns a <strong>1&times;8 array of scores</strong> across eight classes: neutral, happiness, surprise, sadness, anger, disgust, fear, contempt. It runs through OpenCV's existing DNN engine, so no new dependency &mdash; just another file in <code>models/</code>. Trained on Microsoft's FER+, a relabelling of FER2013 where each image was tagged by ten people.</p>
+    <p><span class="f">MODEL 4</span><strong>Eyes closed is a separate problem.</strong> It is <em>not</em> one of the eight classes, so the expression model cannot answer it. YuNet gives five landmarks &mdash; two eye <em>centres</em>, nose tip, two mouth corners &mdash; with no eyelid points, so the usual eye-aspect-ratio trick is impossible. This needs either a 68-point landmark model or a dedicated open/closed eye classifier.</p>
+    <p>Estimated work: 2&ndash;3 hours for expressions, 2&ndash;3 more for eye state, plus download and verification.</p>
+  </div>
+
+  <div class="dn warn"><h4>Two honest cautions before you ask for this</h4>
+    <p><strong>Expression is not emotion.</strong> The model reports the shape of a face, not what the person felt. A polite smile and genuine delight look the same to it. I would label the output "smiling / neutral / reacting" rather than "happy", because the stronger claim is not supported.</p>
+    <p><strong>Accuracy will be worse than the demos suggest.</strong> FER2013 images are small, mostly frontal and web-sourced. Your photographs are 6000&times;4000 with faces at angles, in temple lighting, sometimes partly turned away &mdash; and frontality already reads below 0.45 on 17 of 40 frames. A turned head is exactly where expression models fail.</p>
+    <p>My recommendation: build <strong>eyes-closed first</strong>. A blink ruins a photograph unarguably, and the judgement is objective. "Flat expression" is taste, and taste is what the keep button is for.</p>
+  </div>
+
+  <div class="nav"><button class="btn btn-q" data-go="4">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="6">Next: narrow to the strongest &rarr;</button></div>
+</section>
+
+<!-- ================= 6 WEAK ================= -->
+<section class="panel" data-s="6" hidden>
+  <div class="head"><h1>6 &middot; Narrow to the strongest</h1>
+    <p class="lede">These 19 are all usable. Drag the slider to decide how deep the shortlist goes.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">19</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="w-cut">9</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="w-out">10</div><div class="l">after</div></div>
+    <div class="why">Nothing here is broken &mdash; only weaker than the rest.
+      <div class="fbar"><span class="keepb" id="w-bk" style="width:53%"></span><span class="dropb" id="w-bd" style="width:47%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div>
+    </div>
+  </div>
+
+  <div class="ctl">
+    <label for="wkeep">How many of the 19 to keep</label>
+    <div class="srow"><input class="sl" type="range" id="wkeep" min="1" max="19" value="10"><span class="sv" id="wkeepv">10</span></div>
+    <p class="hint">Kept in score order, best first. Minor faults are shown but never force removal &mdash; a tilted head or a little grain is a compromise, not a reject.</p>
+  </div>
+
+  <div class="dn warn"><h4>Why this is a slider and not a rule</h4>
+    <p>My first design removed every frame carrying <em>any</em> minor fault. On your real batch that left <strong>8 photos out of 40</strong> &mdash; far too harsh.</p>
+    <p>The cause is <code>Head turned away</code>, which fires on <strong>18 of 40</strong>. In candid wedding work someone looking away is the genre, not a defect. A blanket rule would have discarded nearly half the shoot.</p></div>
+
+  <h2 class="sect-t">Minor faults present, for information</h2>
+  <div class="reasons">
+    <div class="rsn off"><span><input type="checkbox" data-n="18"></span>
+      <span><span class="lbl">Head turned away</span><br><span class="sub">Normal in candid work &mdash; off by default</span></span>
+      <span class="bar min"><span style="width:100%"></span></span><span class="ct">18 photos</span></div>
+    <div class="rsn off"><span><input type="checkbox" data-n="13"></span>
+      <span><span class="lbl">Grainy</span><br><span class="sub">More sensor noise than the rest of the batch</span></span>
+      <span class="bar min"><span style="width:72%"></span></span><span class="ct">13 photos</span></div>
+    <div class="rsn off"><span><input type="checkbox" data-n="9"></span>
+      <span><span class="lbl">Bright highlights</span><br><span class="sub">Hot but not clipped</span></span>
+      <span class="bar min"><span style="width:50%"></span></span><span class="ct">9 photos</span></div>
+    <div class="rsn off"><span><input type="checkbox" data-n="8"></span>
+      <span><span class="lbl">Slightly soft</span><br><span class="sub">Softer than most, still usable</span></span>
+      <span class="bar min"><span style="width:44%"></span></span><span class="ct">8 photos</span></div>
+  </div>
+
+  <h2 class="sect-t">About to be cut &mdash; keep any of them</h2>
+  <div class="grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3174</s><span class="tab">55.7</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3174.JPG</div><div class="st minor">Grainy +2 more</div>
+      <button class="keepbtn" data-keep="7Y4A3174">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph port"><s>7Y4A3180</s><span class="tab">53.3</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3180.JPG</div><div class="st minor">Head turned away</div>
+      <button class="keepbtn" data-keep="7Y4A3180">&#128204; Keep this photo</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3186</s><span class="tab">53.0</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3186.JPG</div><div class="st minor">Faces are small</div>
+      <button class="keepbtn" data-keep="7Y4A3186">&#128204; Keep this photo</button></div></article>
+  </div>
+
+  <div class="nav"><button class="btn btn-q" data-go="5">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="7">Next: one per moment &rarr;</button></div>
+</section>
+
+<!-- ================= 7 ONE PER MOMENT ================= -->
+<section class="panel" data-s="7" hidden>
+  <div class="head"><h1>7 &middot; One photo per moment</h1>
+    <p class="lede">Several frames can show the same moment without being duplicates. Only the best of each gets through.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">10</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n">4</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">6</div><div class="l">after</div></div>
+    <div class="why">10 frames covering 6 distinct moments. One winner each.</div>
+  </div>
+
+  <h2 class="sect-t">The six survivors</h2>
+  <p class="sect-n">Each card shows what it beat. Swap if you prefer another frame from that moment, or keep both.</p>
+
+  <div class="grid grid-w">
+    <article class="card sel"><div class="ph port"><s>7Y4A3156</s><span class="pin gold">1</span><span class="tab">77.5</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">Clean, face in focus</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 1 other</button>
+      <button class="keepbtn" data-keep="7Y4A3156b">&#128204; Keep the runner-up too</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3410</s><span class="pin">2</span><span class="tab">71.8</span></div>
+      <div class="cm"><div class="fn">7Y4A3410.JPG</div><div class="st minor">Grainy</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 2 others</button>
+      <button class="keepbtn" data-keep="7Y4A3410b">&#128204; Keep the runner-up too</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3195</s><span class="pin">3</span><span class="tab">71.6</span></div>
+      <div class="cm"><div class="fn">7Y4A3195.JPG</div><div class="st clean">Clean, 2 faces</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Only frame of this moment</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3152</s><span class="pin">4</span><span class="tab">70.7</span></div>
+      <div class="cm"><div class="fn">7Y4A3152.JPG</div><div class="st clean">Clean, 2 faces</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 1 other</button>
+      <button class="keepbtn" data-keep="7Y4A3152b">&#128204; Keep the runner-up too</button></div></article>
+  </div>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">BUILT</span>This is the round-robin selection already in the engine, finally visible. Frames are grouped by how alike they look, then one is taken from each group before any group gives a second.</p>
+    <p>Without it you get six frames of whichever pose was lit best &mdash; one photograph six times. <strong>This step is the difference between a shortlist and a pile.</strong></p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="6">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="8">Next: the best photo &rarr;</button></div>
+</section>
+
+<!-- ================= 8 BEST ================= -->
+<section class="panel" data-s="8" hidden>
+  <div class="head"><h1>8 &middot; The best photo</h1>
+    <p class="lede">One frame out of forty.</p></div>
+
+  <div class="winner">
+    <div class="ph port" style="border-radius:var(--r-sm)"><s>7Y4A3156</s><span class="pin gold">BEST OF 40</span></div>
+    <div>
+      <div class="bs">77.5<small> / 100</small></div>
+      <div class="fn" style="font-size:13px;margin-top:12px">7Y4A3156.JPG</div>
+      <div class="hint">4000&times;6000 &middot; portrait &middot; 1 face &middot; rotated 270&deg; on entry</div>
+      <ul class="vl"><li><span class="p"></span><span><span class="w">Nothing wrong found. </span><span class="y">No measurement on this frame came out poorly.</span></span></li></ul>
+      <div class="mb">
+        <div class="mr"><span>Sharpness</span><span class="t"><span class="f hi" style="width:84%"></span></span><span class="v">84</span></div>
+        <div class="mr"><span>Exposure</span><span class="t"><span class="f hi" style="width:79%"></span></span><span class="v">79</span></div>
+        <div class="mr"><span>Contrast</span><span class="t"><span class="f" style="width:61%"></span></span><span class="v">61</span></div>
+        <div class="mr"><span>Colour</span><span class="t"><span class="f" style="width:58%"></span></span><span class="v">58</span></div>
+        <div class="mr"><span>Low noise</span><span class="t"><span class="f hi" style="width:88%"></span></span><span class="v">88</span></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:17px;flex-wrap:wrap">
+        <a class="btn btn-p" href="#">Download this photo</a>
+        <a class="btn btn-q" href="#">All 6 selects</a>
+        <a class="btn btn-q" href="#">Kept by you (<span id="keptN2">0</span>)</a>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sect-t">How it got here</h2>
+  <ul class="journey">
+    <li><span class="n">1</span><span>Added</span><span class="c">40</span></li>
+    <li><span class="n">2</span><span>Sideways photos fixed &mdash; 15 rotated, none removed</span><span class="c">40</span></li>
+    <li><span class="n">3</span><span>Duplicates removed &mdash; none found in this batch</span><span class="c">40</span></li>
+    <li><span class="n">4</span><span>Unusable removed &mdash; 16 with a fatal fault</span><span class="c">24</span></li>
+    <li class="nbl"><span class="n">5</span><span>Expressions checked &mdash; 5 blinks and flat faces <strong>(not built)</strong></span><span class="c">19</span></li>
+    <li><span class="n">6</span><span>Narrowed to the strongest &mdash; 9 cut</span><span class="c">10</span></li>
+    <li><span class="n">7</span><span>One per moment &mdash; 4 cut</span><span class="c">6</span></li>
+    <li><span class="n">8</span><span><strong>The best</strong></span><span class="c">1</span></li>
+    <li class="kl"><span class="n">&#128204;</span><span>Kept by you, protected from every step</span><span class="c" id="keptN3">0</span></li>
+  </ul>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">NEW SCREEN</span>The journey list is the point of the whole redesign: <strong>you can see exactly why 39 photographs did not make it</strong>, and click back to any decision that looks wrong.</p>
+    <p>Below this would sit the full ranking table from v0.02, for when you want more than one photograph.</p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="7">&larr; Back</button>
+    <button class="btn btn-q" data-go="1">Start a new batch</button></div>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p><strong>This is a mockup.</strong> No server, no uploads, no analysis. Hatched tiles stand in for photographs; sideways labels mark the 15 frames stored rotated.</p>
+  <p>Counts on steps 1&ndash;4, 6 and 7 are measured from the real 40-photo batch, including the inconvenient result that step 3 finds no duplicates in it. <strong>Step 5 is illustrative only &mdash; no expression code exists.</strong></p>
+  <p>Live in this mockup: the fault checkboxes on steps 4, 5 and 6, both sliders, and every <span style="color:var(--keep);font-weight:650">&#128204; Keep this photo</span> button. Press a few and watch the counter in the header.</p>
+</footer>
+
+<script>
+"use strict";
+var STEPS=[
+ {n:1,name:"Add",        count:40, delta:"",            nb:false},
+ {n:2,name:"Straighten", count:40, delta:"15 rotated",  nb:false},
+ {n:3,name:"Duplicates", count:40, delta:"0 removed",   nb:false},
+ {n:4,name:"Unusable",   count:24, delta:"16 removed",  nb:false},
+ {n:5,name:"Expressions",count:19, delta:"5 removed",   nb:true},
+ {n:6,name:"Weak",       count:10, delta:"9 removed",   nb:false},
+ {n:7,name:"Per moment", count:6,  delta:"4 removed",   nb:false},
+ {n:8,name:"The best",   count:1,  delta:"39 removed",  nb:false}
+];
+var cur=1, kept=Object.create(null);
+
+function $(i){return document.getElementById(i)}
+function mk(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+
+function rail(){
+  var r=$("rail");r.innerHTML="";
+  STEPS.forEach(function(s){
+    var b=mk("button","rl"+(s.n===cur?" on":"")+(s.nb?" nb":""));
+    b.type="button";
+    if(s.nb){var t=mk("span","nbt","todo");b.appendChild(t)}
+    b.appendChild(mk("div","k","step "+s.n));
+    b.appendChild(mk("div","nm",s.name));
+    b.appendChild(mk("div","ct",s.count));
+    var cut=s.delta&&s.delta.indexOf("0 removed")!==0&&s.delta.indexOf("removed")>-1;
+    b.appendChild(mk("div","dl"+(cut?" cut":""),s.delta));
+    b.addEventListener("click",function(){show(s.n)});
+    r.appendChild(b);
+  });
+}
+
+function keptCount(){return Object.keys(kept).length}
+
+function paintKept(){
+  var n=keptCount();
+  ["keptN","keptN2","keptN3"].forEach(function(id){ if($(id))$(id).textContent=n; });
+}
+
+function show(n){
+  cur=n;
+  document.querySelectorAll("[data-s]").forEach(function(p){p.hidden=Number(p.dataset.s)!==n});
+  $("liveN").textContent=STEPS[n-1].count;
+  rail();paintKept();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+document.addEventListener("click",function(e){
+  var g=e.target.closest?e.target.closest("[data-go]"):null;
+  if(g){show(Number(g.dataset.go));return}
+
+  var k=e.target.closest?e.target.closest("[data-keep]"):null;
+  if(k){
+    var id=k.dataset.keep, card=k.closest(".card");
+    if(kept[id]){
+      delete kept[id];
+      k.classList.remove("on");
+      k.innerHTML="&#128204; Keep this photo";
+      if(card){card.classList.remove("locked");
+        var lm=card.querySelector(".lockmark"); if(lm)lm.remove();
+        var xm=card.dataset.hadx==="1"?null:null;
+        if(card.dataset.hadx==="1"&&!card.querySelector(".xmark")){
+          var x=mk("span","xmark");x.appendChild(mk("b",null,"remove"));
+          card.querySelector(".ph").appendChild(x);
+        }
+      }
+    }else{
+      kept[id]=true;
+      k.classList.add("on");
+      k.innerHTML="&#128204; Kept &mdash; protected";
+      if(card){
+        card.classList.add("locked");
+        var ex=card.querySelector(".xmark");
+        if(ex){card.dataset.hadx="1";ex.remove()}
+        if(!card.querySelector(".lockmark")){
+          var l=mk("span","lockmark");l.appendChild(mk("b",null,"kept"));
+          card.querySelector(".ph").appendChild(l);
+        }
+      }
+    }
+    paintKept();
+  }
+});
+
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"&&cur<STEPS.length)show(cur+1);
+  if(e.key==="ArrowLeft"&&cur>1)show(cur-1);
+});
+
+/* live counts: step 4 */
+function recount4(){
+  var total=40,cut=0;
+  document.querySelectorAll("#u-reasons input").forEach(function(i){
+    i.closest(".rsn").classList.toggle("off",!i.checked);
+    if(i.checked)cut+=Number(i.dataset.n);
+  });
+  $("u-cut").textContent=cut;$("u-out").textContent=total-cut;
+  $("u-bk").style.width=((total-cut)/total*100)+"%";
+  $("u-bd").style.width=(cut/total*100)+"%";
+}
+/* live counts: step 5 */
+function recount5(){
+  var total=24,cut=0;
+  document.querySelectorAll("#e-reasons input").forEach(function(i){
+    i.closest(".rsn").classList.toggle("off",!i.checked);
+    if(i.checked)cut+=Number(i.dataset.n);
+  });
+  $("e-cut").textContent=cut;$("e-out").textContent=total-cut;
+  $("e-bk").style.width=((total-cut)/total*100)+"%";
+  $("e-bd").style.width=(cut/total*100)+"%";
+}
+document.querySelectorAll("#u-reasons input").forEach(function(i){i.addEventListener("change",recount4)});
+document.querySelectorAll("#e-reasons input").forEach(function(i){i.addEventListener("change",recount5)});
+
+var wk=$("wkeep");
+if(wk)wk.addEventListener("input",function(){
+  var keep=Number(wk.value),total=19;
+  $("wkeepv").textContent=keep;$("w-out").textContent=keep;$("w-cut").textContent=total-keep;
+  $("w-bk").style.width=(keep/total*100)+"%";
+  $("w-bd").style.width=((total-keep)/total*100)+"%";
+});
+
+document.querySelectorAll(".sl[data-out]").forEach(function(s){
+  s.addEventListener("input",function(){$(s.dataset.out).textContent=s.value});
+});
+document.querySelectorAll(".rsn.off input").forEach(function(i){
+  i.addEventListener("change",function(){i.closest(".rsn").classList.toggle("off",!i.checked)});
+});
+
+rail();show(1);recount4();recount5();
+</script>
+</body>
+</html>
