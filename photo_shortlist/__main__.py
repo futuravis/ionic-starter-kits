@@ -50,14 +50,37 @@ def cmd_pick(args: argparse.Namespace) -> int:
         workers=args.workers,
         progress=progress,
         skip_duplicates=not args.keep_duplicates,
+        use_faces=not args.no_faces,
     )
 
     print(f"\n{result.summary()}\n")
-    print(f"  {'#':>2}  {'score':>6}  photo")
-    print(f"  {'-' * 2}  {'-' * 6}  {'-' * 40}")
+
+    print("  THE BEST PHOTO")
+    best = result.best
+    if best:
+        print(f"    {best.name}   score {best.percent}")
+        for issue in best.issues:
+            print(f"      - {issue.severity}: {issue.label} ({issue.detail})")
+
+    print(f"\n  SHORTLIST  ({len(result.picks)} chosen across different shots)")
     for candidate in result.picks:
-        print(f"  {candidate.rank:>2}  {candidate.percent:>6}  {candidate.name}")
-        print(f"      {'':>6}  {candidate.reason}")
+        print(f"    {candidate.pick_rank:>2}. {candidate.percent:>5}  "
+              f"{candidate.name}")
+        print(f"        {candidate.reason}")
+
+    if not args.picks_only:
+        print(f"\n  EVERY PHOTO, BEST TO WORST")
+        print(f"    {'#':>3}  {'score':>5}  {'shot':>4}  photo")
+        print(f"    {'-' * 3}  {'-' * 5}  {'-' * 4}  {'-' * 46}")
+        for c in result.ranked:
+            mark = " *" if c.is_pick else "  "
+            print(f"    {c.rank:>3}  {c.percent:>5}  {c.group:>4} {mark} "
+                  f"{c.name:<28} {c.headline}")
+
+        if result.issue_tally:
+            print(f"\n  WHAT IS WRONG ACROSS THE BATCH")
+            for label, count in result.issue_tally.items():
+                print(f"    {count:>3} of {result.total:<3}  {label}")
 
     if result.failures:
         print(f"\n  {len(result.failures)} file(s) could not be read:")
@@ -103,6 +126,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="parallel worker processes (default: %(default)s)")
     p_pick.add_argument("--keep-duplicates", action="store_true",
                         help="allow near-identical frames to both be picked")
+    p_pick.add_argument("--no-faces", action="store_true",
+                        help="skip face detection and judge the photograph "
+                             "alone (faster)")
+    p_pick.add_argument("--picks-only", action="store_true",
+                        help="print the shortlist without the full ranking")
     p_pick.set_defaults(func=cmd_pick)
 
     return parser

@@ -12,7 +12,25 @@ walked again.
 |---|---|---|
 | **v0** `image_curator.py` | One standalone script. Technical quality only, Haar-cascade faces. | Faces broke silently on OpenCV 5. Still in the repo for reference, imported by nothing. |
 | **v1** `wedding_album` | A proper package. ONNX face models, people clustering, relationship labelling, album trees. | Not replaced. Working, 55 checks passing. Too large for "give me the best 5". |
-| **v2** `photo_shortlist` | Small app. Batch in, best few out, browser review. | Current work. One known defect outstanding. |
+| **v2** `photo_shortlist` | Small app. Batch in, best few out, browser review. | Scope grew: a shortlist alone did not answer "why is this one 31st?". |
+| **v3** `photo_shortlist` | Full 1-to-N ranking, named faults per photo, face-aware checks, hero best photo, CSV export. | Current. 39 checks passing. |
+
+### What v2 to v3 changed
+
+The brief moved from "give me the best 5" to "rank all 50 and tell me what is
+wrong with each". Three things followed from that.
+
+`metrics.py` gained face probing, because most of the faults worth naming are
+about people: a face in shadow from backlighting, or focus that landed on the
+background instead of the couple. A frame-wide exposure reading misses
+backlighting entirely, since the average looks fine.
+
+`diagnose.py` is new. It turns measurements into named faults, and it is where
+the judgement calls live - which faults are major, which are comparative, and
+what a threshold should be.
+
+`shortlist.py` now returns the ranking *and* the shortlist from one pass. They
+answer different questions and the code says so.
 
 Each version kept the one piece worth keeping: photographic measurement. That
 is why `photo_shortlist` imports `wedding_album.quality` rather than carrying
@@ -92,7 +110,8 @@ been worse than thirty lines of simpler code.
 
 ## The grain defect
 
-The honest centre of this document. Found by testing, not yet fixed.
+The honest centre of this document. Found by testing, and fixed - but only
+after three wrong turns, and in the end it needed two changes rather than one.
 
 ### Symptom
 
@@ -141,7 +160,7 @@ enormous score. Blown-out photos went to the top.
 Each fix traded one failure for another. That is the signature of attacking the
 score instead of the measurement.
 
-### The fix that works
+### The fix: two changes, neither sufficient alone
 
 Measure sharpness at several scales and keep the **minimum**.
 
@@ -163,14 +182,38 @@ Grain inflation collapses from 11.7x to 1.3x even at absurd noise levels, and
 blur sensitivity is completely unaffected because for a blurred photo the full
 scale is already the minimum.
 
-This belongs in `photo_shortlist/metrics.py`, substituting the sharpness value
-before `quality.score_collection` is called, leaving `wedding_album` untouched.
-**Not yet written.**
+This lives in `photo_shortlist/metrics.py` as `sharpness_multiscale`, which
+substitutes the value before `quality.score_collection` sees it.
 
-`wedding_album` has the same weakness. Its face and section logic dilute the
-effect, so it is a latent problem there rather than a visible one, and fixing it
-would change which photos existing albums pick. That is a deliberate decision
-left open rather than taken quietly.
+**It was not enough on its own.** With the measurement fixed, grainy frames
+dropped from ranks 1-3 to ranks 1-2 of 14 - better, but still winning. The
+remaining 1.4x edge was enough, because noise only carried 0.12 of the score.
+
+**And then re-weighting worked.** The very fix dismissed above. Raising noise
+to 0.25 with the corrected sharpness in place:
+
+| weights | good | grainy | blurry | dark | blown |
+|---|---|---|---|---|---|
+| sharp .35 / noise .12 | 3-8 | **1-2** | 9-10 | 11-12 | 13-14 |
+| sharp .30 / noise .25 | **1-6** | 7-8 | 9-10 | 11-12 | 13-14 |
+
+The earlier conclusion was not wrong, it was conditional: re-weighting cannot
+fix a contaminated measurement, because the contaminated metric is the one
+being weighted. Fix the measurement and the squeeze disappears. The lesson is
+that "this approach does not work" sometimes means "not yet".
+
+These weights are applied in `shortlist.score` and restored in a `finally`, so
+they never leak into `wedding_album`'s scoring. A test pins that.
+
+On the full 28-photo batch, grainy frames now sit at rank 15.
+
+### Left undone deliberately
+
+`wedding_album` still has the original weakness. It shares
+`quality.compute_sharpness` and its weights are untouched. Its face and section
+logic dilute the effect, so it is latent rather than visible there. Fixing it
+would change which photos existing albums pick, so that is a decision for
+whoever owns that tool, not a change to slip in quietly.
 
 ---
 
@@ -198,9 +241,11 @@ measurements", and whether that matches what a couple would choose is unknown.
 
 | Question | Position |
 |---|---|
-| Face-aware scoring | Not done. The app cannot tell a face from a flower arrangement, so a sharp photo of someone's back can outrank a softer photo of the couple. Models are present; roughly an hour of work. |
+| Face-aware faults | **Done.** Face presence, size, lighting, focus, tilt and frontality are all reported. Faces do not yet influence the *score*, only the fault list - so a sharp photo of someone's back still ranks well, it is just labelled. |
+| Eyes-closed and expressions | **Not possible with the current model.** YuNet gives five landmarks with no eyelid or mouth-shape data. A blink will score well. Would need a different model. |
+| Auto-correcting photos | Not done, and not attempted. The app names faults; it does not brighten, sharpen or straighten anything. Whether it should is an open product question. |
 | RAW files | Not supported. CR2 and NEF are rejected. Needs a new dependency. |
-| Eyes-closed detection | Not done. A technically perfect photo of a blink will score well. |
 | Fixing grain in `wedding_album` | Not done. Would change existing album output. |
 | Python 3.9 | Past end of life since 31 October 2025. Works, but a move to 3.12+ should be planned. |
 | Authentication | None. Both UIs are safe only because they bind to `127.0.0.1`. |
+| Real photographs | **Still the biggest gap.** Nothing here has been tested on an actual wedding photo. |

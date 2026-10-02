@@ -6,16 +6,22 @@ cost, and no photograph ever leaves the computer.
 
 | Application | Job | Status |
 |---|---|---|
-| `photo_shortlist` | Drop in 20-50 photos, get back the best 3-5 | Working, one known defect |
-| `wedding_album` | Organise a whole wedding into an album tree | Working, 55 tests passing |
+| `photo_shortlist` | Rank a batch best to worst, name each photo's faults, shortlist the best few | Working, 39 checks passing |
+| `wedding_album` | Organise a whole wedding into an album tree | Working, 55 checks passing |
+
+**Neither has ever been run on a real wedding photograph.** Every measurement
+quoted below came from synthetic test images with deliberate faults. That
+proves the code works; it does not prove the ranking matches a photographer's
+eye.
 
 ---
 
 ## Which one do I want?
 
-**`photo_shortlist`** if you have a pile of photos and want the best few out of
-it. One batch in, a handful out, reviewed in a browser. This is the smaller and
-simpler of the two.
+**`photo_shortlist`** if you have a pile of photos and want to know which are
+worth keeping. It ranks the whole batch 1 to N, shows the single best one,
+names what is wrong with each, and shortlists the best few across different
+shots. One batch in, reviewed in a browser. The smaller and simpler of the two.
 
 **`wedding_album`** if you have an entire wedding to organise. It detects faces,
 groups them into people, lets you label those people by relationship, splits
@@ -60,9 +66,20 @@ technical quality only and does not look for faces.
 python3 -m photo_shortlist
 ```
 
-Opens `http://127.0.0.1:8767/`. Drag photos onto the page, choose how many you
-want, press the button. Picks appear with a score and a sentence explaining each
-choice, and the Download button bundles them into a zip with a notes file.
+Opens `http://127.0.0.1:8767/`. Drag photos on, choose how many to shortlist,
+press the button. The page then shows:
+
+- **the single best photo**, large, with its score and faults
+- **the shortlist**, spread across different shots
+- **every photo ranked 1 to N**, best to worst, filterable by whether it has a
+  major fault or made the shortlist
+- **a batch-wide fault summary** - how many are dark, soft, grainy and so on
+- **the look-alike bundles**, so you can see which frames competed
+
+Downloads are a zip of the shortlist, with a notes file explaining each choice,
+and a CSV of the full ranking.
+
+Measured: 29 photos in 0.7 seconds including face detection, on 14 cores.
 
 ### On the terminal
 
@@ -70,21 +87,23 @@ choice, and the Download button bundles them into a zip with a notes file.
 python3 -m photo_shortlist pick ~/Pictures/wedding --want 5
 ```
 
-Useful for a quick check or a script. Options: `--want N`, `--workers N`,
-`--keep-duplicates`.
+Prints the best photo, the shortlist, the full ranking and the fault summary.
+Options: `--want N`, `--workers N`, `--keep-duplicates`, `--no-faces`,
+`--picks-only`.
 
-### How it chooses
+### Ranking and shortlist are different questions
 
-Two stages, and the second one is the point.
+The ranking is a straight sort by score, and it includes everything.
 
-A batch of wedding photos usually contains bursts: six frames of the same pose,
-seconds apart. Picking the five highest scores outright returns five frames of
-whichever pose was lit best, which is one photograph five times over.
+The shortlist is not simply the top N of it. A batch of wedding photos contains
+bursts - six frames of the same pose, seconds apart - and the five highest
+scores would be five frames of whichever pose was lit best. That is one
+photograph five times, not a shortlist.
 
-So look-alike frames are bundled first, using a perceptual hash. Then picks are
-taken round-robin: the best of the strongest bundle, then the best of the next,
-and only once every bundle has contributed does it come back for second-best.
-The result is five genuinely different photographs.
+So look-alike frames are bundled by perceptual hash, and picks are taken
+round-robin: the best of the strongest bundle, then the best of the next, and
+only once every bundle has contributed does it come back for second-best. The
+result is five genuinely different photographs.
 
 ---
 
@@ -105,36 +124,87 @@ python3 -m wedding_album organize SRC   # copy the album and write the report
 
 ---
 
-## Known defect
+## What it reports
 
-**`photo_shortlist` ranks grainy photos too highly.** Sharpness is measured as
-the variance of the Laplacian, and sensor grain registers as fine detail, so a
-noisy frame reads as a sharp one. Measured at roughly 25x inflation on a test
-batch: the three grainiest images took the top three places and were described
-as having "crisp detail".
+Every photo gets a rank, a score and a list of named faults. The faults are:
 
-Re-weighting the metrics does not fix it. The weight at which grain stops
-winning is the weight at which blurred photos start winning instead, because
-one contaminated measurement cannot reject two opposite faults.
+| Fault | Severity | How it is decided |
+|---|---|---|
+| Low light | major | mean brightness below 62 of 255 |
+| Washed out | major | mean brightness above 202 of 255 |
+| Shadow detail lost | major | 18%+ of the frame is pure black |
+| Highlights blown out | major | 10%+ of the frame is pure white |
+| Out of focus | major | among the softest fifth of the batch |
+| Face in shadow | major | face much dimmer than the frame: backlighting |
+| Face not in focus | major | frame sharper than the face: focus landed behind |
+| Slightly soft | minor | softer than most of the batch |
+| Grainy | minor | noise above the batch's 78th percentile *and* 25% above its median |
+| Flat, low contrast | minor | intensity spread below 26 |
+| Dark shadows / Bright highlights | minor | milder clipping |
+| Nobody in frame | minor | no face found; reads as a venue or detail shot |
+| Head turned away / Head tilted | minor | from eye and nose landmark geometry |
 
-The fix is to take the *minimum* Laplacian variance across four image scales.
-Grain vanishes when a photo is downsampled and real detail survives, so a photo
-must look sharp at every scale. Measured: grain inflation falls to about 1.1x
-while blur is still rejected at full sensitivity. Not yet implemented.
+Absolute thresholds are used where a fault is a fault regardless of company:
+blown highlights are gone whatever else is in the batch. Comparative
+thresholds are used for focus and grain, because Laplacian variance has no
+universal "sharp" value. Below four photos the comparative faults switch off
+rather than invent a verdict from three samples.
 
-`wedding_album` shares the same measurement and therefore the same weakness,
-though its face and section logic dilute the effect.
+**"Nobody in frame" is minor on purpose.** A wedding set is full of
+photographs with no people in them, and calling that major would push every
+ring, cake and venue shot to the bottom.
+
+### What it cannot tell you
+
+**Closed eyes and expressions are not detected.** YuNet returns five
+landmarks - two eye centres, a nose tip and two mouth corners - which carry no
+eyelid or mouth-shape information. A technically perfect photo of a blink will
+score well. Anything claiming to grade a smile from those five points would be
+guessing, so the app does not try.
+
+RAW files are not supported either; CR2 and NEF are rejected.
+
+---
+
+## A fixed defect worth knowing about
+
+`photo_shortlist` used to rank grainy photos first. Sharpness was the variance
+of the Laplacian, and sensor grain registers as fine detail, so a noisy frame
+read as a sharp one - measured at about 12x inflation, with the grainiest
+frames taking the top slots while being described as having "crisp detail".
+
+It took two changes, and neither works alone:
+
+1. **Sharpness is now the minimum Laplacian variance across four scales.**
+   Grain averages away under downsampling and real detail survives, so a photo
+   must look sharp at every scale. Inflation fell from 12x to 1.4x.
+
+2. **Noise now carries 0.25 of the score here, against 0.12 in the shared
+   config.** That weight was unusable before: while sharpness was contaminated,
+   the setting at which grain stopped winning was the setting at which blurred
+   frames started winning. Fixing the measurement first removed that squeeze.
+
+Grainy frames went from ranks 1-3 to rank 15 of 28. The ordering now comes out
+well-made, then grainy, then soft, then dark, then blown out. Pinned by
+`tests/test_shortlist.py`.
+
+**`wedding_album` still has the original weakness.** It shares
+`quality.compute_sharpness`, and its own weights are untouched. Its face and
+section logic dilute the effect, so it is latent rather than visible there.
+Fixing it would change which photos existing albums pick, so that decision was
+deliberately left open rather than taken quietly.
 
 ---
 
 ## Tests
 
 ```bash
+python3 -m tests.test_shortlist      # 39 checks - ranking, faults, face geometry
 python3 -m tests.test_selection      # 22 checks - shot grouping and picking
 python3 -m tests.test_timeline       # 14 checks - capture-time windows
 python3 -m tests.test_accounting     # 11 checks - every photo accounted for
 python3 -m tests.test_overrides      #  8 checks - runtime config overrides
-python3 -m tests.test_priority       #         - config validation
+python3 -m tests.test_priority       #          - config validation
 ```
 
 **Do not trust `unittest discover` on this project.** It reports
@@ -187,12 +257,13 @@ the server stops. Nothing is kept between sessions.
 ## Layout
 
 ```
-photo_shortlist/        the small app: batch in, best few out
+photo_shortlist/        the small app: batch in, ranked and diagnosed
     __main__.py         CLI entry - serve, or pick on the terminal
-    shortlist.py        bundling look-alikes, round-robin picking
-    app.py              web server, upload, thumbnails, zip download
+    metrics.py          noise-robust sharpness, face probing
+    diagnose.py         turning measurements into named faults
+    shortlist.py        ranking, look-alike bundling, round-robin picking
+    app.py              web server, upload, thumbnails, zip and CSV export
     ui.html             the single page
-    metrics.py          noise-robust sharpness  (NOT YET WRITTEN)
 
 wedding_album/          the full album tool
     quality.py          photographic measurement       <- shared

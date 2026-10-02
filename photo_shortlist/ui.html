@@ -6,16 +6,22 @@
 <title>Photo Shortlist</title>
 <style>
   :root {
-    --bg: #12100f;
-    --panel: #1c1a18;
-    --panel-2: #241f1d;
-    --line: #35302d;
-    --text: #f2ece6;
-    --muted: #a39a92;
-    --accent: #d8a25c;
+    --bg: #110f0e;
+    --panel: #1b1918;
+    --panel-2: #231e1c;
+    --panel-3: #2b2523;
+    --line: #342f2c;
+    --text: #f3ede7;
+    --muted: #a69c94;
+    --faint: #6f675f;
+    --accent: #d9a35d;
     --accent-ink: #231a0e;
-    --good: #7fb686;
-    --bad: #d98080;
+    --major: #d98080;
+    --major-bg: #2e1d1d;
+    --minor: #cfa96a;
+    --minor-bg: #2d2518;
+    --good: #82b889;
+    --good-bg: #1d2a1f;
     --radius: 10px;
   }
 
@@ -28,10 +34,10 @@
     font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 72px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 30px 20px 80px; }
 
-  header { margin-bottom: 28px; }
-  h1 { font-size: 24px; margin: 0 0 6px; font-weight: 600; letter-spacing: -0.2px; }
+  header { margin-bottom: 26px; }
+  h1 { font-size: 24px; margin: 0 0 5px; font-weight: 600; letter-spacing: -0.2px; }
   .sub { color: var(--muted); font-size: 14px; }
 
   .panel {
@@ -39,139 +45,190 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
 
   h2 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.9px;
-    color: var(--muted);
-    margin: 0 0 14px;
-    font-weight: 600;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); margin: 0 0 14px; font-weight: 600;
   }
+  h3 { font-size: 15px; margin: 0 0 10px; font-weight: 600; }
 
   /* ---- drop zone ---- */
   #drop {
-    border: 2px dashed var(--line);
-    border-radius: var(--radius);
-    padding: 36px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s, background .15s;
-    background: var(--panel-2);
+    border: 2px dashed var(--line); border-radius: var(--radius);
+    padding: 34px 20px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s; background: var(--panel-2);
   }
   #drop:hover, #drop:focus-visible { border-color: var(--accent); outline: none; }
   #drop.over { border-color: var(--accent); background: #2b2219; }
-  #drop .big { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  #drop .big { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
   #drop .small { color: var(--muted); font-size: 13px; }
   input[type=file] { display: none; }
 
   /* ---- controls ---- */
   .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+  .between { justify-content: space-between; align-items: center; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   label { font-size: 13px; color: var(--muted); }
 
   input[type=number] {
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    color: var(--text);
-    border-radius: 7px;
-    padding: 9px 11px;
-    font-size: 15px;
-    width: 92px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 7px; padding: 9px 11px; font-size: 15px; width: 88px;
   }
-  input[type=range] { width: 190px; accent-color: var(--accent); }
-  input:focus-visible, button:focus-visible, summary:focus-visible {
+  input[type=range] { width: 180px; accent-color: var(--accent); }
+  input:focus-visible, button:focus-visible, summary:focus-visible, a:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px;
   }
-
   .check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
   .check input { accent-color: var(--accent); width: 16px; height: 16px; }
 
-  button {
-    font: inherit;
-    font-weight: 600;
-    border-radius: 7px;
-    padding: 10px 18px;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--text);
-    cursor: pointer;
+  button, .btn {
+    font: inherit; font-weight: 600; border-radius: 7px; padding: 10px 17px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    cursor: pointer; text-decoration: none; display: inline-block;
   }
-  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:hover:not(:disabled), .btn:hover { border-color: var(--accent); }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.sm { padding: 6px 12px; font-size: 13px; font-weight: 500; }
+  button.sm[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
   /* ---- messages ---- */
   .msg { padding: 11px 14px; border-radius: 7px; margin-bottom: 16px; font-size: 14px; }
-  .msg.ok { background: #1e2a1f; color: var(--good); border: 1px solid #2f4231; }
-  .msg.err { background: #2c1d1d; color: var(--bad); border: 1px solid #452b2b; }
+  .msg.ok { background: var(--good-bg); color: var(--good); border: 1px solid #2f4231; }
+  .msg.err { background: var(--major-bg); color: var(--major); border: 1px solid #452b2b; }
+  .msg.warn { background: var(--minor-bg); color: var(--minor); border: 1px solid #453a22; }
   [hidden] { display: none !important; }
 
   /* ---- progress ---- */
   .bar { height: 7px; background: var(--panel-2); border-radius: 4px; overflow: hidden; margin-top: 10px; }
   .bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
 
-  /* ---- film strip of uploads ---- */
+  /* ---- upload strip ---- */
   .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
-  .strip img { height: 64px; width: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
-
-  /* ---- picks ---- */
-  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .card {
-    background: var(--panel-2);
+  .strip img {
+    height: 62px; width: 62px; object-fit: cover; border-radius: 6px;
     border: 1px solid var(--line);
-    border-radius: var(--radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
   }
-  .card.top { border-color: var(--accent); }
+
+  /* ---- stats ---- */
+  .stats { display: flex; flex-wrap: wrap; gap: 24px; }
+  .stat .n { font-size: 21px; font-weight: 600; }
+  .stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+
+  /* ---- hero: the single best photo ---- */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, 1fr); gap: 22px; }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } }
+  .hero .frame { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; display: block; }
+  .hero .frame img { width: 100%; display: block; aspect-ratio: 3 / 2; object-fit: cover; }
+  .crown {
+    position: absolute; top: 12px; left: 12px; background: var(--accent);
+    color: var(--accent-ink); font-size: 12px; font-weight: 700;
+    padding: 5px 12px; border-radius: 20px; letter-spacing: .4px;
+  }
+  .hero .fname { font-size: 15px; font-weight: 600; word-break: break-all; margin-bottom: 3px; }
+  .hero .big-score { font-size: 38px; font-weight: 700; line-height: 1.1; }
+  .hero .of { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+
+  /* ---- metric bars ---- */
+  .bars { margin-top: 12px; display: grid; gap: 6px; }
+  .metric {
+    display: grid; grid-template-columns: 76px 1fr 32px; gap: 9px;
+    align-items: center; font-size: 11px; color: var(--muted);
+  }
+  .metric .track { height: 5px; background: var(--panel-3); border-radius: 3px; overflow: hidden; }
+  .metric .fill { height: 100%; background: var(--muted); }
+  .metric .fill.hi { background: var(--good); }
+  .metric .fill.lo { background: var(--major); }
+  .metric .val { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---- issue chips ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600;
+    border: 1px solid transparent; cursor: help;
+  }
+  .chip.major { background: var(--major-bg); color: var(--major); border-color: #452b2b; }
+  .chip.minor { background: var(--minor-bg); color: var(--minor); border-color: #453a22; }
+  .chip.clean { background: var(--good-bg); color: var(--good); border-color: #2f4231; }
+
+  .issue-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .issue-list li { font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 9px; }
+  .issue-list .dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 7px; }
+  .issue-list .dot.major { background: var(--major); }
+  .issue-list .dot.minor { background: var(--minor); }
+  .issue-list .lbl { font-weight: 600; }
+  .issue-list .det { color: var(--muted); }
+
+  /* ---- shortlist row ---- */
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 15px; }
+  .card {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card.first { border-color: var(--accent); }
   .shot { position: relative; display: block; background: #000; }
   .shot img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; display: block; }
   .badge {
-    position: absolute; top: 9px; left: 9px;
-    background: var(--accent); color: var(--accent-ink);
-    font-size: 12px; font-weight: 700;
+    position: absolute; top: 8px; left: 8px; background: var(--accent);
+    color: var(--accent-ink); font-size: 11px; font-weight: 700;
     padding: 3px 9px; border-radius: 20px;
   }
-  .score {
-    position: absolute; top: 9px; right: 9px;
-    background: rgba(0,0,0,.72); color: #fff;
-    font-size: 12px; font-weight: 600;
-    padding: 3px 9px; border-radius: 20px;
+  .scorepill {
+    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.74);
+    color: #fff; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
   }
-  .meta { padding: 12px 13px 14px; }
-  .fname {
-    font-size: 13px; font-weight: 600; margin-bottom: 5px;
-    word-break: break-all;
+  .meta { padding: 11px 12px 13px; }
+  .fname { font-size: 12px; font-weight: 600; margin-bottom: 4px; word-break: break-all; }
+  .why { font-size: 12px; color: var(--muted); }
+
+  /* ---- full ranking table/grid ---- */
+  .ranked { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 13px; }
+  .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .tile.picked { border-color: var(--accent); }
+  .tile.flawed { border-color: #4a3030; }
+  .tile .shot img { aspect-ratio: 1 / 1; }
+  .tile .rank {
+    position: absolute; top: 7px; left: 7px; background: rgba(0,0,0,.8);
+    color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; font-variant-numeric: tabular-nums;
   }
-  .why { font-size: 13px; color: var(--muted); }
+  .tile .rank.top3 { background: var(--accent); color: var(--accent-ink); }
+  .tile .star {
+    position: absolute; bottom: 7px; left: 7px; background: var(--accent);
+    color: var(--accent-ink); font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px;
+  }
+  .tile .tmeta { padding: 9px 10px 11px; }
+  .tile .tname { font-size: 11px; color: var(--muted); word-break: break-all; margin-bottom: 4px; }
+  .tile .thead { font-size: 12px; font-weight: 600; }
+  .tile .thead.major { color: var(--major); }
+  .tile .thead.minor { color: var(--minor); }
+  .tile .thead.clean { color: var(--good); }
 
-  .bars { margin-top: 11px; display: grid; gap: 5px; }
-  .metric { display: grid; grid-template-columns: 74px 1fr; gap: 9px; align-items: center; font-size: 11px; color: var(--muted); }
-  .metric .track { height: 5px; background: #322c28; border-radius: 3px; overflow: hidden; }
-  .metric .fill { height: 100%; background: var(--muted); }
+  /* ---- grouped view ---- */
+  details { border-top: 1px solid var(--line); }
+  summary { cursor: pointer; font-size: 14px; padding: 13px 0; font-weight: 600; }
+  summary:hover { color: var(--accent); }
+  .group { border-top: 1px dashed var(--line); padding: 13px 0; }
+  .group .ghead { font-size: 13px; margin-bottom: 9px; color: var(--muted); }
+  .gtiles { display: flex; flex-wrap: wrap; gap: 9px; }
+  .gt { width: 112px; }
+  .gt .shot img { width: 112px; height: 112px; aspect-ratio: auto; border-radius: 6px; }
+  .gt.chosen .shot img { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .gt .cap { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .gt .cap.dup { color: var(--major); }
 
-  /* ---- groups ---- */
-  details { margin-top: 10px; }
-  summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 7px 0; }
-  summary:hover { color: var(--text); }
-  .group { border-top: 1px solid var(--line); padding: 14px 0; }
-  .group h3 { font-size: 13px; margin: 0 0 9px; font-weight: 600; }
-  .tiles { display: flex; flex-wrap: wrap; gap: 9px; }
-  .tile { width: 118px; }
-  .tile img { width: 118px; height: 79px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); display: block; }
-  .tile.chosen img { border-color: var(--accent); }
-  .tile .cap { font-size: 11px; color: var(--muted); margin-top: 4px; }
-  .dup { color: var(--bad); }
+  /* ---- tally ---- */
+  .tally { display: grid; gap: 7px; }
+  .tally .line { display: grid; grid-template-columns: 1fr auto; gap: 12px; font-size: 13px; align-items: center; }
+  .tally .tbar { height: 6px; background: var(--panel-3); border-radius: 3px; overflow: hidden; }
+  .tally .tfill { height: 100%; background: var(--minor); }
+  .tally .cnt { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
 
-  .stats { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 4px; }
-  .stat .n { font-size: 20px; font-weight: 600; }
-  .stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
-
-  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 28px; }
+  .note { font-size: 12px; color: var(--faint); margin-top: 12px; line-height: 1.5; }
+  footer { color: var(--faint); font-size: 12px; text-align: center; margin-top: 26px; line-height: 1.7; }
 </style>
 </head>
 <body>
@@ -179,15 +236,15 @@
 
   <header>
     <h1>Photo Shortlist</h1>
-    <div class="sub">Add your photos, choose how many you want, and get the best of the set.</div>
+    <div class="sub">Add your photos. Get them ranked best to worst, with the faults named.</div>
   </header>
 
   <div id="banner" class="msg" hidden role="status" aria-live="polite"></div>
+  <div id="modelWarn" class="msg warn" hidden></div>
 
-  <!-- 1. ADD PHOTOS -->
+  <!-- 1 . ADD -->
   <section class="panel">
     <h2>1 &middot; Add photos</h2>
-
     <div id="drop" role="button" tabindex="0"
          aria-label="Choose photos, or drag and drop them here">
       <div class="big">Drag photos here, or click to choose</div>
@@ -195,25 +252,25 @@
     </div>
     <input type="file" id="files" multiple accept="image/*">
 
-    <div id="uploaded" hidden style="margin-top:16px">
-      <div class="row" style="justify-content:space-between; margin-bottom:10px">
+    <div id="uploaded" hidden style="margin-top:15px">
+      <div class="row between" style="margin-bottom:10px">
         <strong id="uploadCount">0 photos ready</strong>
-        <button type="button" id="reset">Start over</button>
+        <button type="button" id="reset" class="sm">Start over</button>
       </div>
       <div class="strip" id="strip"></div>
     </div>
   </section>
 
-  <!-- 2. SHORTLIST -->
+  <!-- 2 . ANALYSE -->
   <section class="panel">
-    <h2>2 &middot; Shortlist</h2>
+    <h2>2 &middot; Analyse</h2>
     <div class="row">
       <div class="field">
-        <label for="wantRange">How many photos do you want?</label>
+        <label for="wantRange">How many to shortlist?</label>
         <div class="row" style="gap:12px; align-items:center">
           <input type="range" id="wantRange" min="1" max="20" value="5">
           <input type="number" id="want" min="1" max="20" value="5"
-                 aria-label="Number of photos to pick">
+                 aria-label="Number of photos to shortlist">
         </div>
       </div>
       <div class="field">
@@ -221,38 +278,84 @@
           <input type="checkbox" id="skipDupes" checked>
           Avoid near-identical frames
         </label>
+        <label class="check" for="useFaces">
+          <input type="checkbox" id="useFaces" checked>
+          Check faces, lighting and focus on people
+        </label>
       </div>
       <div class="field">
-        <button type="button" id="go" class="primary" disabled>Find the best photos</button>
+        <button type="button" id="go" class="primary" disabled>Analyse and rank</button>
       </div>
     </div>
 
     <div id="progress" hidden>
-      <div style="margin-top:16px; font-size:13px; color:var(--muted)" id="stage"></div>
+      <div style="margin-top:15px; font-size:13px; color:var(--muted)" id="stage"></div>
       <div class="bar"><span id="fill"></span></div>
     </div>
   </section>
 
-  <!-- 3. RESULTS -->
-  <section class="panel" id="results" hidden>
-    <h2>3 &middot; Your picks</h2>
+  <!-- 3 . RESULTS -->
+  <div id="results" hidden>
 
-    <div class="stats" id="stats"></div>
+    <section class="panel">
+      <h2>Overview</h2>
+      <div class="stats" id="stats"></div>
+      <div class="row" style="margin-top:18px">
+        <button type="button" id="download" class="primary">Download shortlist</button>
+        <a class="btn" id="csv" href="/api/ranking.csv">Export full ranking (CSV)</a>
+      </div>
+    </section>
 
-    <div class="row" style="margin:16px 0 20px">
-      <button type="button" id="download" class="primary">Download these photos</button>
-    </div>
+    <section class="panel">
+      <h2>The best photo</h2>
+      <div class="hero" id="hero"></div>
+    </section>
 
-    <div class="picks" id="picks"></div>
+    <section class="panel">
+      <h2>Shortlist &mdash; <span id="pickCount"></span> chosen across different shots</h2>
+      <div class="picks" id="picks"></div>
+      <p class="note">
+        These are not simply the top scores. Look-alike frames are bundled
+        first and one photo is taken from each bundle before any bundle gives a
+        second, so the shortlist is different photographs rather than the same
+        pose repeated.
+      </p>
+    </section>
 
-    <details id="allShots">
-      <summary id="allShotsLabel">Show every shot and why it lost</summary>
-      <div id="groups"></div>
-    </details>
-  </section>
+    <section class="panel">
+      <h2>Every photo, best to worst</h2>
+      <div class="row between" style="margin-bottom:14px">
+        <div class="row" style="gap:7px" role="group" aria-label="Filter photos">
+          <button type="button" class="sm filter" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="sm filter" data-filter="clean" aria-pressed="false">No major fault</button>
+          <button type="button" class="sm filter" data-filter="flawed" aria-pressed="false">Has a major fault</button>
+          <button type="button" class="sm filter" data-filter="picked" aria-pressed="false">Shortlisted</button>
+        </div>
+        <span class="cnt" id="showing"></span>
+      </div>
+      <div class="ranked" id="ranked"></div>
+    </section>
+
+    <section class="panel">
+      <h2>What is wrong across the batch</h2>
+      <div class="tally" id="tally"></div>
+      <p class="note" id="faceNote"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Grouped by shot</h2>
+      <details id="groupWrap">
+        <summary id="groupLabel">Show the look-alike bundles</summary>
+        <div id="groups"></div>
+      </details>
+      <div id="failures"></div>
+    </section>
+
+  </div>
 
   <footer>
-    Runs entirely on this machine. No upload leaves your computer, no API key, no cloud.
+    Runs entirely on this machine. No photo leaves your computer, no API key, no cloud.<br>
+    Scores are relative to the batch you uploaded, so "best" means best of these.
   </footer>
 
 </div>
@@ -271,19 +374,25 @@ const METRIC_LABELS = {
 };
 
 let polling = null;
+let LAST = null;          // the most recent /api/result payload
+let FILTER = "all";
 
-/* ---------------------------------------------------------------- helpers */
+/* ------------------------------------------------------------- helpers */
 
 function banner(text, kind) {
   const el = $("banner");
   if (!text) { el.hidden = true; return; }
   el.textContent = text;
-  el.className = "msg " + (kind === "err" ? "err" : "ok");
+  el.className = "msg " + (kind === "err" ? "err" : kind === "warn" ? "warn" : "ok");
   el.hidden = false;
 }
 
 function thumb(name, width) {
   return "/api/thumb?w=" + width + "&p=" + encodeURIComponent(name);
+}
+
+function fullUrl(name) {
+  return "/api/full?p=" + encodeURIComponent(name);
 }
 
 async function api(route, options) {
@@ -294,7 +403,14 @@ async function api(route, options) {
   return data;
 }
 
-/* ------------------------------------------------------------------ state */
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/* ---------------------------------------------------------------- state */
 
 async function refreshState() {
   const state = await api("/api/state");
@@ -303,6 +419,17 @@ async function refreshState() {
   $("wantRange").max = state.max_want;
   $("dropHint").textContent =
     state.extensions.join(", ") + " \u00b7 up to " + state.max_files + " photos";
+
+  if (!state.faces_available) {
+    $("useFaces").checked = false;
+    $("useFaces").disabled = true;
+    const warn = $("modelWarn");
+    warn.textContent =
+      "Face checks are unavailable: the detection model is missing. " +
+      "Run  python3 -m wedding_album download-models  to enable them. " +
+      "Ranking still works on technical quality alone.";
+    warn.hidden = false;
+  }
 
   showUploads(state.uploaded, state.names);
   return state;
@@ -316,8 +443,8 @@ function showUploads(count, names) {
 
   const strip = $("strip");
   strip.innerHTML = "";
-  names.slice(0, 60).forEach((name) => {
-    const img = document.createElement("img");
+  (names || []).slice(0, 80).forEach((name) => {
+    const img = el("img");
     img.src = thumb(name, 128);
     img.alt = name;
     img.loading = "lazy";
@@ -325,7 +452,7 @@ function showUploads(count, names) {
   });
 }
 
-/* ----------------------------------------------------------------- upload */
+/* --------------------------------------------------------------- upload */
 
 async function upload(fileList) {
   const files = Array.from(fileList || []);
@@ -351,7 +478,7 @@ async function upload(fileList) {
   }
 }
 
-/* -------------------------------------------------------------- shortlist */
+/* ------------------------------------------------------------- analysis */
 
 async function start() {
   banner("", null);
@@ -365,7 +492,8 @@ async function start() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         want: parseInt($("want").value, 10),
-        skip_duplicates: $("skipDupes").checked
+        skip_duplicates: $("skipDupes").checked,
+        use_faces: $("useFaces").checked
       })
     });
     poll();
@@ -380,16 +508,12 @@ function poll() {
   if (polling) clearInterval(polling);
   polling = setInterval(async () => {
     let p;
-    try {
-      p = await api("/api/progress");
-    } catch (err) {
-      return;
-    }
+    try { p = await api("/api/progress"); } catch (err) { return; }
 
     const pct = p.total ? Math.round((p.current / p.total) * 100) : 0;
     $("fill").style.width = pct + "%";
     $("stage").textContent = p.stage
-      ? p.stage + (p.total ? "  " + p.current + " / " + p.total : "")
+      ? p.stage + (p.total ? "   " + p.current + " / " + p.total : "")
       : "";
 
     if (p.running) return;
@@ -402,176 +526,316 @@ function poll() {
     if (p.error) { banner(p.error, "err"); return; }
     if (p.message) banner(p.message, "ok");
     if (p.ready) render(await api("/api/result"));
-  }, 400);
+  }, 350);
 }
 
-/* ------------------------------------------------------------------ render */
+/* --------------------------------------------------------------- pieces */
 
 function metricBars(breakdown) {
-  const wrap = document.createElement("div");
-  wrap.className = "bars";
+  const wrap = el("div", "bars");
 
   Object.keys(METRIC_LABELS).forEach((key) => {
     if (!(key in breakdown)) return;
     const value = Math.round(breakdown[key] * 100);
 
-    const row = document.createElement("div");
-    row.className = "metric";
+    const row = el("div", "metric");
+    row.appendChild(el("span", null, METRIC_LABELS[key]));
 
-    const name = document.createElement("span");
-    name.textContent = METRIC_LABELS[key];
-
-    const track = document.createElement("span");
-    track.className = "track";
+    const track = el("span", "track");
     track.setAttribute("role", "img");
-    track.setAttribute("aria-label", METRIC_LABELS[key] + ": " + value + " out of 100");
-
-    const fill = document.createElement("span");
-    fill.className = "fill";
+    track.setAttribute("aria-label",
+      METRIC_LABELS[key] + ": " + value + " out of 100");
+    const fill = el("span", "fill" + (value >= 70 ? " hi" : value <= 35 ? " lo" : ""));
     fill.style.width = value + "%";
     track.appendChild(fill);
 
-    row.appendChild(name);
     row.appendChild(track);
+    row.appendChild(el("span", "val", value));
     wrap.appendChild(row);
   });
 
   return wrap;
 }
 
-function pickCard(photo) {
-  const card = document.createElement("div");
-  card.className = "card" + (photo.rank === 1 ? " top" : "");
+function issueChips(photo) {
+  const chips = el("div", "chips");
 
-  const link = document.createElement("a");
-  link.className = "shot";
-  link.href = "/api/full?p=" + encodeURIComponent(photo.photo);
+  if (!photo.issues.length) {
+    chips.appendChild(el("span", "chip clean", "No problems found"));
+    return chips;
+  }
+
+  photo.issues.forEach((issue) => {
+    const chip = el("span", "chip " + issue.severity, issue.label);
+    chip.title = issue.detail;
+    chips.appendChild(chip);
+  });
+
+  return chips;
+}
+
+function issueList(photo) {
+  const list = el("ul", "issue-list");
+
+  if (!photo.issues.length) {
+    const li = el("li");
+    li.appendChild(el("span", "dot"));
+    const body = el("span");
+    body.appendChild(el("span", "lbl", "No problems found. "));
+    body.appendChild(el("span", "det",
+      "Nothing measured came out poorly on this one."));
+    li.appendChild(body);
+    list.appendChild(li);
+    return list;
+  }
+
+  photo.issues.forEach((issue) => {
+    const li = el("li");
+    li.appendChild(el("span", "dot " + issue.severity));
+    const body = el("span");
+    body.appendChild(el("span", "lbl", issue.label + ". "));
+    body.appendChild(el("span", "det", issue.detail));
+    li.appendChild(body);
+    list.appendChild(li);
+  });
+
+  return list;
+}
+
+function linkedShot(photo, width, extras) {
+  const link = el("a", "shot");
+  link.href = fullUrl(photo.photo);
   link.target = "_blank";
   link.rel = "noopener";
 
-  const img = document.createElement("img");
-  img.src = thumb(photo.photo, 560);
-  img.alt = photo.reason ? photo.name + ": " + photo.reason : photo.name;
+  const img = el("img");
+  img.src = thumb(photo.photo, width);
+  img.alt = photo.name + ". " + (photo.headline || "");
   img.loading = "lazy";
   link.appendChild(img);
 
-  const badge = document.createElement("span");
-  badge.className = "badge";
-  badge.textContent = "#" + photo.rank;
-  link.appendChild(badge);
+  (extras || []).forEach((node) => link.appendChild(node));
+  return link;
+}
 
-  const score = document.createElement("span");
-  score.className = "score";
-  score.textContent = photo.score;
-  link.appendChild(score);
+/* ----------------------------------------------------------------- hero */
 
-  const meta = document.createElement("div");
-  meta.className = "meta";
+function renderHero(photo, total) {
+  const hero = $("hero");
+  hero.innerHTML = "";
 
-  const name = document.createElement("div");
-  name.className = "fname";
-  name.textContent = photo.name;
+  const crown = el("span", "crown", "BEST OF " + total);
+  hero.appendChild(linkedShot(photo, 900, [crown]));
 
-  const why = document.createElement("div");
-  why.className = "why";
-  why.textContent = photo.reason;
+  const side = el("div");
+  side.appendChild(el("div", "big-score", photo.score));
+  side.appendChild(el("div", "of", "score out of 100"));
 
-  meta.appendChild(name);
-  meta.appendChild(why);
-  meta.appendChild(metricBars(photo.breakdown || {}));
+  const name = el("div", "fname", photo.name);
+  name.style.marginTop = "14px";
+  side.appendChild(name);
 
-  card.appendChild(link);
+  if (photo.dimensions) {
+    side.appendChild(el("div", "why", photo.dimensions +
+      (photo.faces > 0
+        ? "  \u00b7  " + photo.faces + (photo.faces === 1 ? " face" : " faces")
+        : "")));
+  }
+
+  side.appendChild(issueList(photo));
+  side.appendChild(metricBars(photo.breakdown || {}));
+  hero.appendChild(side);
+}
+
+/* ------------------------------------------------------------- picks */
+
+function pickCard(photo) {
+  const card = el("div", "card" + (photo.pick_rank === 1 ? " first" : ""));
+
+  const badge = el("span", "badge", "#" + photo.pick_rank);
+  const pill = el("span", "scorepill", photo.score);
+  card.appendChild(linkedShot(photo, 520, [badge, pill]));
+
+  const meta = el("div", "meta");
+  meta.appendChild(el("div", "fname", photo.name));
+  meta.appendChild(el("div", "why", photo.reason));
+  meta.appendChild(issueChips(photo));
   card.appendChild(meta);
+
   return card;
 }
 
-function statBlock(number, label) {
-  const stat = document.createElement("div");
-  stat.className = "stat";
-  const n = document.createElement("div");
-  n.className = "n";
-  n.textContent = number;
-  const l = document.createElement("div");
-  l.className = "l";
-  l.textContent = label;
-  stat.appendChild(n);
-  stat.appendChild(l);
-  return stat;
+/* ------------------------------------------------------- full ranking */
+
+function rankTile(photo) {
+  const flawed = !photo.usable;
+  const tile = el("div", "tile" + (photo.pick ? " picked" : flawed ? " flawed" : ""));
+
+  const rank = el("span", "rank" + (photo.rank <= 3 ? " top3" : ""), photo.rank);
+  const extras = [rank];
+  if (photo.pick) extras.push(el("span", "star", "SHORTLIST"));
+  tile.appendChild(linkedShot(photo, 300, extras));
+
+  const meta = el("div", "tmeta");
+  meta.appendChild(el("div", "tname", photo.name));
+
+  const severity = flawed ? "major"
+    : (photo.issues.length ? "minor" : "clean");
+  meta.appendChild(el("div", "thead " + severity,
+    photo.score + "  \u00b7  " + (photo.headline || "")));
+
+  tile.appendChild(meta);
+  return tile;
 }
 
+function applyFilter() {
+  if (!LAST) return;
+
+  const all = LAST.ranked;
+  const shown = all.filter((photo) => {
+    if (FILTER === "clean") return photo.usable;
+    if (FILTER === "flawed") return !photo.usable;
+    if (FILTER === "picked") return photo.pick;
+    return true;
+  });
+
+  const grid = $("ranked");
+  grid.innerHTML = "";
+  shown.forEach((photo) => grid.appendChild(rankTile(photo)));
+
+  $("showing").textContent =
+    shown.length === all.length
+      ? "showing all " + all.length
+      : "showing " + shown.length + " of " + all.length;
+}
+
+/* -------------------------------------------------------------- tally */
+
+function renderTally(tally, total) {
+  const wrap = $("tally");
+  wrap.innerHTML = "";
+
+  const entries = Object.entries(tally || {});
+  if (!entries.length) {
+    wrap.appendChild(el("div", "note", "No faults found anywhere in this batch."));
+    return;
+  }
+
+  const worst = Math.max.apply(null, entries.map((e) => e[1]));
+
+  entries.forEach(([label, count]) => {
+    const line = el("div", "line");
+
+    const left = el("div");
+    left.appendChild(el("div", null, label));
+    const track = el("div", "tbar");
+    const fill = el("div", "tfill");
+    fill.style.width = Math.round((count / worst) * 100) + "%";
+    track.appendChild(fill);
+    left.appendChild(track);
+
+    line.appendChild(left);
+    line.appendChild(el("span", "cnt", count + " of " + total));
+    wrap.appendChild(line);
+  });
+}
+
+/* ------------------------------------------------------------- groups */
+
 function groupBlock(group) {
-  const block = document.createElement("div");
-  block.className = "group";
+  const block = el("div", "group");
+  block.appendChild(el("div", "ghead",
+    "Shot " + group.index + " \u00b7 " +
+    (group.size === 1 ? "single frame" : group.size + " similar frames")));
 
-  const heading = document.createElement("h3");
-  heading.textContent = "Shot " + group.index + " \u00b7 " +
-    (group.size === 1 ? "1 frame" : group.size + " similar frames");
-  block.appendChild(heading);
-
-  const tiles = document.createElement("div");
-  tiles.className = "tiles";
-
+  const tiles = el("div", "gtiles");
   group.photos.forEach((photo) => {
-    const tile = document.createElement("div");
-    tile.className = "tile" + (photo.pick ? " chosen" : "");
+    const gt = el("div", "gt" + (photo.pick ? " chosen" : ""));
+    gt.appendChild(linkedShot(photo, 240, []));
 
-    const link = document.createElement("a");
-    link.href = "/api/full?p=" + encodeURIComponent(photo.photo);
-    link.target = "_blank";
-    link.rel = "noopener";
+    let text = "#" + photo.rank + "  \u00b7  " + photo.score;
+    if (photo.pick) text += "  \u00b7  picked";
+    const cap = el("div", "cap" + (photo.duplicate ? " dup" : ""), text);
+    if (photo.duplicate) cap.title = "near-duplicate of " + photo.duplicate_of;
+    gt.appendChild(cap);
 
-    const img = document.createElement("img");
-    img.src = thumb(photo.photo, 240);
-    img.alt = photo.name;
-    img.loading = "lazy";
-    link.appendChild(img);
-
-    const cap = document.createElement("div");
-    cap.className = "cap" + (photo.duplicate ? " dup" : "");
-    let text = photo.score + (photo.pick ? "  \u00b7  picked #" + photo.rank : "");
-    if (photo.duplicate) text += "  \u00b7  near-duplicate";
-    cap.textContent = text;
-
-    tile.appendChild(link);
-    tile.appendChild(cap);
-    tiles.appendChild(tile);
+    tiles.appendChild(gt);
   });
 
   block.appendChild(tiles);
   return block;
 }
 
+/* ------------------------------------------------------------- render */
+
+function statBlock(number, label) {
+  const stat = el("div", "stat");
+  stat.appendChild(el("div", "n", number));
+  stat.appendChild(el("div", "l", label));
+  return stat;
+}
+
 function render(result) {
   if (!result.ready) return;
+  LAST = result;
 
+  const s = result.stats;
   const stats = $("stats");
   stats.innerHTML = "";
-  stats.appendChild(statBlock(result.stats.analyzed, "analyzed"));
-  stats.appendChild(statBlock(result.stats.shots, "distinct shots"));
-  stats.appendChild(statBlock(result.stats.picked, "picked"));
-  if (result.stats.duplicates) {
-    stats.appendChild(statBlock(result.stats.duplicates, "near-duplicates"));
-  }
-  if (result.stats.unreadable) {
-    stats.appendChild(statBlock(result.stats.unreadable, "unreadable"));
-  }
+  stats.appendChild(statBlock(s.analyzed, "ranked"));
+  stats.appendChild(statBlock(s.shots, "distinct shots"));
+  stats.appendChild(statBlock(s.picked, "shortlisted"));
+  stats.appendChild(statBlock(s.usable, "no major fault"));
+  if (s.flawed) stats.appendChild(statBlock(s.flawed, "major fault"));
+  if (s.duplicates) stats.appendChild(statBlock(s.duplicates, "near-duplicates"));
+  if (s.unreadable) stats.appendChild(statBlock(s.unreadable, "unreadable"));
 
+  if (result.best) renderHero(result.best, s.analyzed);
+
+  $("pickCount").textContent = result.picks.length;
   const picks = $("picks");
   picks.innerHTML = "";
   result.picks.forEach((photo) => picks.appendChild(pickCard(photo)));
 
+  FILTER = "all";
+  document.querySelectorAll(".filter").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.filter === "all"));
+  });
+  applyFilter();
+
+  renderTally(result.issue_tally, s.analyzed);
+
+  $("faceNote").textContent = result.faces_probed
+    ? "Face checks ran on this batch: whether anyone is in frame, whether " +
+      "their face is lit, and whether the focus landed on them. Closed eyes " +
+      "and expressions are not detected \u2014 the model returns five " +
+      "landmarks and carries no eyelid or mouth-shape information, so any " +
+      "such verdict would be guesswork."
+    : "Face checks did not run on this batch, so every fault listed is about " +
+      "the photograph rather than the people in it.";
+
   const groups = $("groups");
   groups.innerHTML = "";
   result.groups.forEach((group) => groups.appendChild(groupBlock(group)));
+  $("groupLabel").textContent =
+    "Show the " + result.groups.length + " look-alike bundles";
 
-  $("allShotsLabel").textContent =
-    "Show all " + result.stats.analyzed + " photos, grouped by shot";
+  const failures = $("failures");
+  failures.innerHTML = "";
+  if (result.failures.length) {
+    const box = el("div", "msg err");
+    box.style.marginTop = "14px";
+    box.textContent = result.failures.length +
+      " file(s) could not be read: " +
+      result.failures.map((f) => f.name + " (" + f.error + ")").join(", ");
+    failures.appendChild(box);
+  }
 
   $("results").hidden = false;
   $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* ------------------------------------------------------------------ wiring */
+/* ------------------------------------------------------------- wiring */
 
 $("drop").addEventListener("click", () => $("files").click());
 $("drop").addEventListener("keydown", (event) => {
@@ -593,28 +857,34 @@ $("drop").addEventListener("keydown", (event) => {
     $("drop").classList.remove("over");
   });
 });
-$("drop").addEventListener("drop", (event) => {
-  upload(event.dataTransfer.files);
-});
+$("drop").addEventListener("drop", (event) => upload(event.dataTransfer.files));
 
 $("files").addEventListener("change", (event) => {
   upload(event.target.files);
-  event.target.value = "";             // so the same file can be re-added
+  event.target.value = "";            // so the same file can be re-added
 });
 
 $("want").addEventListener("input", () => { $("wantRange").value = $("want").value; });
 $("wantRange").addEventListener("input", () => { $("want").value = $("wantRange").value; });
 
 $("go").addEventListener("click", start);
+$("download").addEventListener("click", () => { window.location = "/api/download"; });
 
-$("download").addEventListener("click", () => {
-  window.location = "/api/download";
+document.querySelectorAll(".filter").forEach((button) => {
+  button.addEventListener("click", () => {
+    FILTER = button.dataset.filter;
+    document.querySelectorAll(".filter").forEach((other) => {
+      other.setAttribute("aria-pressed", String(other === button));
+    });
+    applyFilter();
+  });
 });
 
 $("reset").addEventListener("click", async () => {
   try {
     await api("/api/reset", { method: "POST" });
     $("results").hidden = true;
+    LAST = null;
     showUploads(0, []);
     banner("Cleared. Add a new set of photos.", "ok");
   } catch (err) {

@@ -36,7 +36,7 @@ import cv2
 
 from wedding_album import config, pipeline
 
-from . import __version__, shortlist
+from . import __version__, metrics as measurement, shortlist
 
 
 HOST = "127.0.0.1"
@@ -147,8 +147,9 @@ SESSION = Session()
 # WORK
 # ============================================================================
 
-def _do_shortlist(want: int, skip_duplicates: bool, workers: int) -> None:
-    """Run the shortlist on a background thread."""
+def _do_shortlist(want: int, skip_duplicates: bool, workers: int,
+                  use_faces: bool = True) -> None:
+    """Run the analysis on a background thread."""
     try:
         with SESSION.lock:
             paths = list(SESSION.uploads)
@@ -160,6 +161,7 @@ def _do_shortlist(want: int, skip_duplicates: bool, workers: int) -> None:
         result = shortlist.run(
             paths, want=want, workers=workers,
             progress=SESSION.step, skip_duplicates=skip_duplicates,
+            use_faces=use_faces,
         )
 
         with SESSION.lock:
@@ -167,7 +169,7 @@ def _do_shortlist(want: int, skip_duplicates: bool, workers: int) -> None:
             SESSION.want = want
             SESSION.skip_duplicates = skip_duplicates
 
-        if not result.picks:
+        if not result.ranked:
             SESSION.finish(error="No readable photos in this batch.")
             return
 
@@ -187,15 +189,29 @@ def _photo_payload(candidate: shortlist.Candidate) -> dict:
         "photo": os.path.basename(candidate.filepath),
         "name": candidate.name,
         "score": candidate.percent,
+        "rank": candidate.rank,
         "group": candidate.group,
         "group_size": candidate.group_size,
         "pick": candidate.is_pick,
-        "rank": candidate.rank,
+        "pick_rank": candidate.pick_rank,
         "reason": candidate.reason,
         "duplicate": candidate.is_duplicate,
         "duplicate_of": (os.path.basename(candidate.duplicate_of)
                          if candidate.duplicate_of else ""),
         "breakdown": candidate.breakdown,
+        "headline": candidate.headline,
+        "usable": candidate.is_usable,
+        "faces": candidate.face_count,
+        "face_ratio": round(candidate.face_ratio, 3),
+        "issues": [
+            {
+                "code": issue.code,
+                "label": issue.label,
+                "severity": issue.severity,
+                "detail": issue.detail,
+            }
+            for issue in candidate.issues
+        ],
         "dimensions": (f"{candidate.width}x{candidate.height}"
                        if candidate.width else ""),
     }
@@ -209,20 +225,27 @@ def _result_payload() -> dict:
     if result is None:
         return {"ready": False}
 
+    best = result.best
+
     return {
         "ready": True,
         "want": want,
         "summary": result.summary(),
+        "faces_probed": result.faces_probed,
         "stats": {
             "analyzed": result.total,
             "shots": len(result.groups),
             "picked": len(result.picks),
-            "duplicates": sum(1 for g in result.groups
-                              for m in g.members if m.is_duplicate),
+            "usable": result.usable_count,
+            "flawed": result.total - result.usable_count,
+            "duplicates": sum(1 for c in result.ranked if c.is_duplicate),
             "unreadable": len(result.failures),
         },
+        "issue_tally": result.issue_tally,
+        "best": _photo_payload(best) if best else None,
         "picks": [_photo_payload(c) for c in result.picks],
-        "runners_up": [_photo_payload(c) for c in result.runners_up],
+        # The whole batch, best to worst. This is the 1-to-N ordering.
+        "ranked": [_photo_payload(c) for c in result.ranked],
         "groups": [
             {
                 "index": g.index,
@@ -254,6 +277,10 @@ def _state_payload() -> dict:
         "extensions": sorted(config.IMAGE_EXTENSIONS),
         "workers": pipeline.default_workers(),
         "ready": SESSION.result is not None,
+        # Whether face-aware faults can be reported at all. The ONNX model is
+        # not in version control, so a fresh clone has it missing until
+        # `python3 -m wedding_album download-models` has been run.
+        "faces_available": measurement.faces_available(),
     }
 
 
@@ -348,21 +375,72 @@ def _picks_zip() -> Optional[bytes]:
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
-        lines = ["Photo Shortlist picks", ""]
+        lines = ["Photo Shortlist - selected photos", ""]
+
         for candidate in result.picks:
             if not os.path.isfile(candidate.filepath):
                 continue
-            arcname = f"{candidate.rank:02d}_{candidate.name}"
+            # Numbered by shortlist position, so the ordering survives the
+            # download and the files sort correctly in any folder.
+            arcname = f"{candidate.pick_rank:02d}_{candidate.name}"
             archive.write(candidate.filepath, arcname)
-            lines.append(
-                f"{candidate.rank}. {arcname}  "
-                f"score {candidate.percent}  -  {candidate.reason}"
-            )
-        # JPEGs are already compressed, so the zip is for bundling only; the
-        # notes file explains the choices once the photos leave this app.
+
+            lines.append(f"{candidate.pick_rank}. {arcname}")
+            lines.append(f"      score {candidate.percent}  "
+                         f"(overall rank {candidate.rank} of {result.total})")
+            lines.append(f"      {candidate.reason}")
+            for issue in candidate.issues:
+                lines.append(f"      - {issue.severity}: {issue.label} "
+                             f"({issue.detail})")
+            lines.append("")
+
+        # JPEGs are already compressed, so the zip is for bundling only. The
+        # notes explain the choices once the photos leave this app, and the
+        # full ranking goes along so nothing is lost by downloading only the
+        # shortlist.
         archive.writestr("why_these_photos.txt", "\n".join(lines) + "\n")
+        archive.writestr("full_ranking.csv", _ranking_csv() or "")
 
     return buffer.getvalue()
+
+
+def _ranking_csv() -> Optional[str]:
+    """
+    The complete ranking as CSV, best to worst.
+
+    Exists so the ordering can go into a spreadsheet and be handed to someone
+    who is never going to open this application.
+    """
+    with SESSION.lock:
+        result = SESSION.result
+
+    if result is None or not result.ranked:
+        return None
+
+    def escape(value: str) -> str:
+        if any(ch in value for ch in ',"\n'):
+            return '"' + value.replace('"', '""') + '"'
+        return value
+
+    rows = ["rank,photo,score,shortlisted,shot_group,near_duplicate,"
+            "faces,major_faults,all_faults"]
+
+    for c in result.ranked:
+        major = "; ".join(i.label for i in c.issues if i.is_major)
+        every = "; ".join(f"{i.label} ({i.severity})" for i in c.issues)
+        rows.append(",".join([
+            str(c.rank),
+            escape(c.name),
+            str(c.percent),
+            "yes" if c.is_pick else "",
+            str(c.group),
+            "yes" if c.is_duplicate else "",
+            str(c.face_count) if c.face_count >= 0 else "not checked",
+            escape(major),
+            escape(every),
+        ]))
+
+    return "\n".join(rows) + "\n"
 
 
 # ============================================================================
@@ -562,6 +640,15 @@ class Handler(BaseHTTPRequestHandler):
                        disposition='attachment; filename="shortlist.zip"')
             return
 
+        if route == "/api/ranking.csv":
+            csv = _ranking_csv()
+            if csv is None:
+                self._error("nothing to export yet", 400)
+                return
+            self._send(csv.encode("utf-8"), "text/csv; charset=utf-8",
+                       disposition='attachment; filename="full_ranking.csv"')
+            return
+
         self._error("no such route", 404)
 
     # -- POST ----------------------------------------------------------
@@ -652,6 +739,7 @@ class Handler(BaseHTTPRequestHandler):
         workers = max(1, min(16, workers))
 
         skip_duplicates = bool(body.get("skip_duplicates", True))
+        use_faces = bool(body.get("use_faces", True))
 
         with SESSION.lock:
             if not SESSION.uploads:
@@ -661,11 +749,11 @@ class Handler(BaseHTTPRequestHandler):
         SESSION.begin("starting")
         threading.Thread(
             target=_do_shortlist,
-            args=(want, skip_duplicates, workers),
+            args=(want, skip_duplicates, workers, use_faces),
             daemon=True,
         ).start()
 
-        self._json({"started": True, "want": want})
+        self._json({"started": True, "want": want, "use_faces": use_faces})
 
 
 # ============================================================================
