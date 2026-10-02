@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wedding Album Organizer</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --panel-3: #252a35;
+    --line: #2a2f3a; --text: #e6e9ef; --muted: #949cad; --dim: #6b7383;
+    --accent: #3b82f6; --green: #22c55e; --warn: #f59e0b; --red: #ef4444;
+    --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  a { color: var(--accent); }
+
+  header { padding:16px 24px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    position:sticky; top:0; background:var(--bg); z-index:20; }
+  header h1 { margin:0; font-size:17px; font-weight:600; }
+  header .ver { color:var(--muted); font-size:12px; }
+  header .spacer { flex:1; }
+  main { padding:20px 24px 80px; max-width:1200px; margin:0 auto; }
+
+  .panel { background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--r); padding:18px; margin-bottom:18px; }
+  .panel > h2 { margin:0 0 3px; font-size:14px; font-weight:600; }
+  .panel > p.lead { margin:0 0 16px; color:var(--muted); font-size:12.5px; }
+
+  .grid { display:grid; gap:16px; }
+  .g2 { grid-template-columns:1fr 1fr; }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  @media (max-width:880px){ .g2,.g3{ grid-template-columns:1fr; } }
+
+  .ctrl { background:var(--panel-2); border:1px solid var(--line);
+    border-radius:9px; padding:13px 14px; }
+  .ctrl > .name { font-size:13px; font-weight:500; margin-bottom:2px; }
+  .ctrl > .why { font-size:11.5px; color:var(--muted); margin:0 0 10px; }
+  .ctrl > .note { font-size:11.5px; color:var(--dim); margin-top:8px;
+    border-top:1px dashed var(--line); padding-top:8px; }
+  .ctrl .now { color:var(--accent); font-weight:500; }
+
+  input[type=text], input[type=number], select {
+    width:100%; padding:8px 10px; background:var(--panel-3);
+    border:1px solid var(--line); border-radius:7px; color:var(--text);
+    font-size:13px; font-family:inherit; }
+  input[type=range]{ width:100%; accent-color:var(--accent); }
+  .rr { display:flex; align-items:center; gap:10px; }
+  .rr output { min-width:52px; text-align:right; font-size:12.5px;
+    font-variant-numeric:tabular-nums; color:var(--accent); font-weight:500; }
+  .ends { display:flex; justify-content:space-between; font-size:10.5px;
+    color:var(--dim); margin-top:3px; }
+  .check { display:flex; gap:8px; align-items:flex-start; font-size:13px; }
+  .check input { accent-color:var(--accent); margin-top:3px; }
+  .check span small { display:block; color:var(--muted); font-size:11.5px; }
+
+  button { padding:9px 16px; border-radius:7px; border:1px solid transparent;
+    font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
+  button.primary { background:var(--accent); color:#fff; }
+  button.go { background:var(--green); color:#06230f; }
+  button.ghost { background:transparent; border-color:var(--line); color:var(--text); }
+  button.mini { padding:5px 10px; font-size:12px; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:18px; }
+
+  .bar { height:6px; background:var(--panel-2); border-radius:99px;
+    overflow:hidden; margin-top:14px; }
+  .bar > div { height:100%; width:0; background:var(--accent); transition:width .2s; }
+  .status { margin-top:9px; font-size:12.5px; color:var(--muted); }
+  .msg { margin-top:14px; padding:10px 12px; border-radius:8px; font-size:13px;
+    border:1px solid transparent; }
+  .msg.ok { background:#0d2818; border-color:#1c5234; color:#86efac; }
+  .msg.bad { background:#2a1113; border-color:#5b1f23; color:#fca5a5; }
+  .msg.warn{ background:#2a2110; border-color:#5c4519; color:#fcd34d; }
+
+  /* folder browser */
+  .fb { background:var(--panel-2); border:1px solid var(--line);
+    border-radius:9px; padding:12px; }
+  .fb .path { font-size:12px; color:var(--muted); word-break:break-all;
+    margin-bottom:9px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .fb .list { max-height:210px; overflow-y:auto; border:1px solid var(--line);
+    border-radius:7px; background:var(--panel); }
+  .fb .row { padding:7px 11px; font-size:13px; cursor:pointer;
+    border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; }
+  .fb .row:last-child { border-bottom:0; }
+  .fb .row:hover { background:var(--panel-3); }
+  .fb .row .ico { color:var(--dim); }
+  .fb .foot { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+  .fb .count { font-size:12px; color:var(--muted); }
+
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:11px; }
+  .tile { background:var(--panel-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:13px; text-align:center; }
+  .tile b { display:block; font-size:23px; font-weight:600; }
+  .tile span { font-size:11px; color:var(--muted); }
+
+  .person { background:var(--panel-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:12px; margin-bottom:11px; }
+  .person.todo { border-color:#5c4519; }
+  .person .top { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:9px; }
+  .person .pid { font-weight:600; }
+  .person .meta { color:var(--muted); font-size:12px; }
+  .faces { display:flex; gap:6px; overflow-x:auto; padding-bottom:3px; }
+  .faces img { width:72px; height:72px; border-radius:7px; object-fit:cover;
+    border:1px solid var(--line); flex:none; background:var(--panel); }
+  .roles { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .roles button { padding:5px 11px; font-size:12px; background:var(--panel);
+    border-color:var(--line); color:var(--muted); }
+  .roles button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .roles button.on.ig { background:#4b5563; border-color:#4b5563; }
+  .naming { display:flex; gap:8px; margin-top:9px; }
+
+  .sec { background:var(--panel-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:14px; margin-bottom:12px; }
+  .sec .head { display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+  .sec .head b { font-size:14px; }
+  .sec .head .meta { color:var(--muted); font-size:12px; }
+  .sec .head .why { color:var(--dim); font-size:11.5px; margin-left:auto; }
+  .sgroup { margin-top:11px; padding-top:11px; border-top:1px dashed var(--line); }
+  .sgroup:first-of-type { border-top:0; }
+  .sgroup .glabel { font-size:11.5px; color:var(--muted); margin-bottom:7px; }
+  .shots { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px; }
+  .shot { position:relative; }
+  .shot img { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:7px;
+    border:1px solid var(--line); background:var(--panel); display:block; }
+  .shot.pick img { border-color:var(--green); border-width:2px; }
+  .shot .cap { font-size:10.5px; color:var(--muted); margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shot .score { position:absolute; right:4px; bottom:25px;
+    background:rgba(0,0,0,.78); border-radius:4px; padding:1px 5px; font-size:10.5px;
+    font-variant-numeric:tabular-nums; }
+  .tag { position:absolute; left:4px; top:4px; border-radius:4px; padding:1px 6px;
+    font-size:10px; font-weight:600; }
+  .tag.pick { background:var(--green); color:#06230f; }
+  .tag.dup { background:var(--warn); color:#2a1d00; }
+
+  details.adv { margin-top:16px; }
+  details.adv summary { cursor:pointer; color:var(--accent); font-size:12.5px;
+    margin-bottom:14px; }
+  .prio { font-size:12px; color:var(--muted); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-top:16px; }
+  .prio code { color:var(--text); font-size:11.5px; }
+  .empty { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Wedding Album Organizer</h1>
+  <span class="ver" id="version"></span>
+  <span class="spacer"></span>
+  <span class="ver" id="modelstate"></span>
+</header>
+
+<main>
+
+<!-- ================= 1. COLLECTION ================= -->
+<div class="panel">
+  <h2>1. Which photos</h2>
+  <p class="lead">Your originals are only ever read. Everything is copied into a new folder inside this one.</p>
+
+  <div class="fb">
+    <div class="path" id="fbPath">...</div>
+    <div class="list" id="fbList"></div>
+    <div class="foot">
+      <button class="ghost mini" id="fbUp">Up one level</button>
+      <button class="primary mini" id="fbUse">Use this folder</button>
+      <span class="count" id="fbCount"></span>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="ctrl">
+      <div class="name">Selected collection</div>
+      <p class="why">The folder that will be analyzed. You can also type or paste a path.</p>
+      <input type="text" id="source" spellcheck="false">
+    </div>
+    <div class="ctrl">
+      <div class="name">Album folder name</div>
+      <p class="why">Created inside the collection. Numbered so each run keeps the last one instead of overwriting it, letting you compare settings.</p>
+      <input type="text" id="outname" spellcheck="false">
+      <div class="note" id="verNote"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 2. HOW MANY ================= -->
+<div class="panel">
+  <h2>2. How much to keep</h2>
+  <p class="lead">The single most useful setting. Everything else is fine-tuning.</p>
+
+  <div class="ctrl" style="margin-bottom:16px">
+    <div class="name">Scope</div>
+    <p class="why">A wedding is not one shoot. Your ceremony folders are separate occasions and each deserves its own selection.</p>
+    <label class="check" style="margin-top:6px">
+      <input type="radio" name="mode" value="batch" checked>
+      <span>Every shoot folder, album written in place <b>(recommended)</b>
+        <small id="shootHint">Each folder that holds photos gets its own album beside them. Your structure is untouched.</small></span>
+    </label>
+    <label class="check" style="margin-top:10px">
+      <input type="radio" name="mode" value="single">
+      <span>Treat the whole selection as one collection
+        <small>One album at the top level. Small ceremonies tend to disappear.</small></span>
+    </label>
+    <div class="note" id="shootList">...</div>
+  </div>
+
+  <div class="grid g2">
+    <div class="ctrl" id="flatCtrl">
+      <div class="name">Album layout</div>
+      <p class="why">How the finished album is arranged on disk.</p>
+      <label class="check" style="margin-top:6px">
+        <input type="radio" name="layout" value="flat" checked>
+        <span>Flat &mdash; one album, three levels <b>(recommended)</b>
+          <small>event / phase / <code>Top</code> &middot; <code>Review</code> &middot; <code>Others</code></small></span>
+      </label>
+      <label class="check" style="margin-top:10px">
+        <input type="radio" name="layout" value="pershoot">
+        <span>One album inside every shoot folder
+          <small>The older layout. Reaches eight levels deep.</small></span>
+      </label>
+
+      <div class="name" style="margin-top:14px">Photos in <code>Top</code> per phase</div>
+      <div class="rr">
+        <input type="range" id="top" min="1" max="20" step="1">
+        <output id="topOut"></output>
+      </div>
+      <div class="ends"><span>1</span><span>20</span></div>
+      <div class="note">
+        A phase is one page of the album: Getting Ready counts as a single page
+        even though it was shot as four folders, so this many come from the
+        session as a whole. Spread across <b>different moments</b>, never several
+        frames of the same one. <b>Top</b> is copied at full size;
+        <b>Review</b> and <b>Others</b> are previews, since 697 unchosen
+        originals would outweigh the album.
+      </div>
+    </div>
+
+    <div class="ctrl" id="pctCtrl" hidden>
+      <div class="name">Keep this share of each section</div>
+      <p class="why">A percentage, because one number has to work for a 6-photo ceremony and an 800-photo reception alike.</p>
+      <div class="rr">
+        <input type="range" id="percent" min="1" max="50" step="1">
+        <output id="percentOut"></output>
+      </div>
+      <div class="ends"><span>1% strict</span><span>50% generous</span></div>
+      <div class="note" id="pctNote">
+        At <b>10%</b>: a 6-photo ceremony keeps 1, a 51-photo one keeps 6,
+        a 173-photo one keeps 18. Never fewer than one per section, so a quiet
+        ceremony is never dropped entirely. Picks are spread across
+        <b>different poses</b> rather than taken straight off the top of the
+        score list.
+      </div>
+    </div>
+
+    <div class="ctrl" id="picksCtrl" hidden>
+      <div class="name">Picks per section</div>
+      <p class="why">A fixed count, for a single folder where you know what you want.</p>
+      <div class="rr">
+        <input type="range" id="picks" min="0" max="12" step="1">
+        <output id="picksOut"></output>
+      </div>
+      <div class="ends"><span>0 = keep everything</span><span>12</span></div>
+      <div class="note">
+        Spread across different poses, so 3 gives you three distinct
+        photographs rather than three frames of the pose that scored best.
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <div class="name">Duplicates and alternatives</div>
+      <p class="why">Burst frames are cleared out before anything else is decided.</p>
+      <label class="check" style="margin-top:6px">
+        <input type="checkbox" id="dropdup" checked>
+        <span>Discard near-duplicates first
+          <small>Your 1099-photo collection contained 213 of them — a fifth of
+          everything. Clearing them shrinks every later decision.</small></span>
+      </label>
+      <div class="note">
+        For each pick, the next-best frame of the same pose is kept in
+        <code id="soName">2nd_Option</code> as a second option. Photos from poses
+        that were not picked stay where they are — copying everything would just
+        rebuild your collection under a new name.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SHOOT BREAKDOWN ================= -->
+<div class="panel" id="shootsPanel" hidden>
+  <h2>Per-shoot breakdown</h2>
+  <p class="lead">One album per folder. Reviewed here before anything is copied.</p>
+  <div style="overflow-x:auto">
+    <table id="shootTable" style="width:100%;border-collapse:collapse;font-size:12.5px"></table>
+  </div>
+</div>
+
+<!-- ================= 3. TUNING ================= -->
+<div class="panel">
+  <h2>3. Recognition settings</h2>
+  <p class="lead">The defaults were tuned on a real 25-photo shoot. Change one at a time and re-analyze to see the effect.</p>
+
+  <div class="grid g3">
+    <div class="ctrl">
+      <div class="name">Is this the same person?</div>
+      <p class="why">How alike two faces must be to be treated as one person.</p>
+      <div class="rr"><input type="range" id="match" min="0.20" max="0.70" step="0.005"><output id="matchOut"></output></div>
+      <div class="ends"><span>0.20 merges more</span><span>0.70 splits more</span></div>
+      <div class="note">
+        <b>Raise it</b> if two different guests were merged into one person.
+        <b>Lower it</b> if the same person shows up as several entries below.
+        Default <span class="now">0.363</span>, the figure recommended for this
+        face model.
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <div class="name">How certain must a face be?</div>
+      <p class="why">The confidence needed before something counts as a face at all.</p>
+      <div class="rr"><input type="range" id="detect" min="0.20" max="0.95" step="0.01"><output id="detectOut"></output></div>
+      <div class="ends"><span>0.20 finds more</span><span>0.95 finds fewer</span></div>
+      <div class="note">
+        <b>Lower it</b> to catch guests in profile or turned away from the camera.
+        <b>Raise it</b> if statues, posters or blurry background shapes keep appearing
+        as people. Default <span class="now">0.50</span> deliberately errs towards
+        finding too much: an extra entry you mark "Not a person" costs a click,
+        while a missed relative costs a photo.
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <div class="name">When are two photos the same shot?</div>
+      <p class="why">Used both to flag duplicates and to group poses together.</p>
+      <div class="rr"><input type="range" id="dup" min="10" max="140" step="1"><output id="dupOut"></output></div>
+      <div class="ends"><span>10 = only identical</span><span>140 = loose</span></div>
+      <div class="note">
+        Measured on your own photos: <b>48</b> was the same pose twice,
+        <b>78</b> was the same outfit in a different pose, <b>126</b> was two
+        unrelated photos. Default <span class="now">60</span> calls a repeat a
+        repeat while keeping a genuinely different pose.
+      </div>
+    </div>
+  </div>
+
+  <details class="adv">
+    <summary>What makes a photo "good" — quality weights and two more rules</summary>
+
+    <div class="grid g3">
+      <div class="ctrl">
+        <div class="name">Sharpness</div>
+        <p class="why">Is the subject in focus?</p>
+        <div class="rr"><input type="range" id="w_sharpness" min="0" max="1" step="0.01"><output id="w_sharpnessOut"></output></div>
+        <div class="note">The strongest sign of a keeper: a soft or shaken photo can't be rescued. Raise it if blurry shots are still getting picked. Default <span class="now">0.35</span>, the highest of the five.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">Exposure</div>
+        <p class="why">Too bright, too dark, or just right?</p>
+        <div class="rr"><input type="range" id="w_exposure" min="0" max="1" step="0.01"><output id="w_exposureOut"></output></div>
+        <div class="note">Penalises washed-out whites and lost shadow detail, which cannot be recovered either. Raise it for outdoor shoots in harsh sun. Default <span class="now">0.18</span>.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">Contrast</div>
+        <p class="why">Does the photo have depth, or look flat?</p>
+        <div class="rr"><input type="range" id="w_contrast" min="0" max="1" step="0.01"><output id="w_contrastOut"></output></div>
+        <div class="note">Separates a punchy frame from a hazy one. Lower it if you shoot deliberately soft or pastel work and don't want it penalised. Default <span class="now">0.18</span>.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">Colour</div>
+        <p class="why">How rich are the colours?</p>
+        <div class="rr"><input type="range" id="w_saturation" min="0" max="1" step="0.01"><output id="w_saturationOut"></output></div>
+        <div class="note">Favours vivid saris, flowers and decor. <b>Lower it to near zero</b> for black-and-white or muted film looks, which would otherwise score badly through no fault of their own. Default <span class="now">0.17</span>.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">Grain</div>
+        <p class="why">Speckly noise from shooting in low light.</p>
+        <div class="rr"><input type="range" id="w_noise" min="0" max="1" step="0.01"><output id="w_noiseOut"></output></div>
+        <div class="note">Cleaner is better, so this counts against grainy frames. Kept lowest because it measures coarsely on these files and is more of a tiebreaker than a verdict. Default <span class="now">0.12</span>.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">These are relative</div>
+        <p class="why">Only the balance between them matters.</p>
+        <div class="note" style="border-top:0;padding-top:0;margin-top:0">
+          They are rescaled automatically, so they need not add up to anything in
+          particular. Doubling one is the same as halving the other four.
+          Scores are also relative to <i>this</i> collection: 100 means the best of
+          these photos, not perfect.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="ctrl">
+        <div class="name">When is a child the subject?</div>
+        <p class="why">How big a child's face must be to send the photo to the Kids page.</p>
+        <div class="rr"><input type="range" id="prominent" min="0.02" max="0.30" step="0.005"><output id="prominentOut"></output></div>
+        <div class="ends"><span>0.02 almost any</span><span>0.30 close-ups only</span></div>
+        <div class="note">A toddler wandering through the back of a family portrait should leave it under Family. <b>Raise it</b> if background children are pulling photos into Kids. Default <span class="now">0.08</span>, roughly a face filling a twelfth of the frame.</div>
+      </div>
+      <div class="ctrl">
+        <div class="name">How many people make a group?</div>
+        <p class="why">Unlabelled people needed before a photo counts as a group shot.</p>
+        <input type="number" id="groupmin" min="2" max="12">
+        <div class="note">Only applies to people you haven't identified. Once you label them, the photo moves to Family, Friends or wherever they belong. Default <span class="now">3</span>.</div>
+      </div>
+    </div>
+
+    <div class="ctrl" style="margin-top:16px">
+      <div class="name">Try a few photos first</div>
+      <p class="why">Analyze only the first N photos. Useful on a large collection.</p>
+      <input type="number" id="limit" min="0" value="0">
+      <div class="note">0 means the whole collection.</div>
+    </div>
+  </details>
+
+  <div class="prio">
+    <b>Which page does a photo go on?</b> The first of these that matches wins, and every photo lands on exactly one page:<br>
+    <code id="prio"></code><br>
+    Family sits above Couple on purpose, so the couple photographed with a parent
+    counts as the family's moment. Tell me if you'd rather it went the other way.
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="analyzeBtn">Analyze (preview)</button>
+    <button class="ghost" id="reloadBtn">Reload results</button>
+    <span class="ver" id="workers"></span>
+  </div>
+
+  <div class="bar"><div id="bar"></div></div>
+  <div class="status" id="status">Idle.</div>
+  <div id="notice"></div>
+</div>
+
+<!-- ================= OVERVIEW ================= -->
+<div class="panel" id="statsPanel" hidden>
+  <h2>Overview</h2>
+  <div class="tiles" id="tiles"></div>
+</div>
+
+<!-- ================= PEOPLE ================= -->
+<div class="panel" id="peoplePanel" hidden>
+  <h2>4. Who is who</h2>
+  <p class="lead">
+    Tell it each person's <b>relationship</b>, not their identity: sisters, in-laws and
+    cousins all belong to Family. Use <b>Not a person</b> for statues, posters and
+    framed photographs. Clicking a role refiles photos straight away, with no
+    re-analysis.
+  </p>
+  <div id="people"></div>
+</div>
+
+<!-- ================= ALBUM ================= -->
+<div class="panel" id="sectionsPanel" hidden>
+  <h2>5. Album preview</h2>
+  <p class="lead">
+    Grouped by pose, exactly as it will be written. A green border marks a pick;
+    everything else becomes an alternative. Hover any photo for the reason it landed there.
+  </p>
+  <div id="sections"></div>
+</div>
+
+<!-- ================= WRITE ================= -->
+<div class="panel" id="organizePanel" hidden>
+  <h2>6. Write the album</h2>
+  <p class="lead">Copies files into the album folder. Originals are never moved, renamed or deleted.</p>
+  <div class="grid g2">
+    <div class="ctrl">
+      <div class="name">Before you run</div>
+      <div class="note" style="border-top:0;padding-top:0;margin-top:0" id="planNote"></div>
+    </div>
+    <div class="ctrl">
+      <div class="name">Options</div>
+      <label class="check" style="margin-top:8px">
+        <input type="checkbox" id="clean">
+        <span>Overwrite if the album folder already exists
+          <small>Off by default: a new numbered folder is used instead.</small></span>
+      </label>
+      <label class="check" style="margin-top:10px">
+        <input type="checkbox" id="allowun">
+        <span>Run even with unidentified people
+          <small>Their photos go to Unsorted or Group.</small></span>
+      </label>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="go" id="organizeBtn">Copy photos into the album</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g,
+  (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* empty body */ }
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+const WEIGHTS = ['sharpness','exposure','contrast','saturation','noise'];
+let STATE = null, polling = null, LAST = null;
+
+function bindRange(id, digits) {
+  const el = $(id), out = $(id + 'Out');
+  const show = () => { out.value = Number(el.value).toFixed(digits); };
+  el.addEventListener('input', show); show();
+}
+function notice(kind, text) {
+  $('notice').innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : '';
+}
+
+/* ---------------- folder browser ---------------- */
+
+let fbPath = null;
+
+async function fbLoad(path) {
+  let data;
+  try { data = await api('/api/folders?path=' + encodeURIComponent(path)); }
+  catch (e) { notice('bad', e.message); return; }
+
+  fbPath = data.path;
+  $('fbPath').textContent = data.path;
+  $('fbCount').textContent = data.image_count
+    ? `${data.image_count} photo(s) directly usable here`
+    : 'no photos found directly in this folder';
+
+  $('fbList').innerHTML = data.folders.length
+    ? data.folders.map((f) =>
+        `<div class="row" data-f="${esc(f)}"><span class="ico">&#9656;</span>${esc(f)}</div>`
+      ).join('')
+    : '<div class="row" style="color:var(--muted);cursor:default">no subfolders</div>';
+
+  $('fbList').querySelectorAll('.row[data-f]').forEach((row) => {
+    row.addEventListener('click', () => fbLoad(fbPath + '/' + row.dataset.f));
+  });
+}
+
+$('fbUp').addEventListener('click', () => {
+  const up = fbPath.replace(/\/[^/]+\/?$/, '') || '/';
+  fbLoad(up);
+});
+$('fbUse').addEventListener('click', async () => {
+  $('source').value = fbPath;
+  notice('ok', 'Collection set to ' + fbPath);
+  await refreshVersionHint();
+  applyMode();
+});
+
+/* ---------------- config ---------------- */
+
+async function refreshVersionHint() {
+  try {
+    const s = await api('/api/state');
+    $('outname').value = s.suggested_name;
+    const list = s.existing_versions || [];
+    $('verNote').innerHTML = list.length
+      ? `Already present: ${list.map((n) => 'v' + n).join(', ')}. This run writes <b>${esc(s.suggested_name)}</b>.`
+      : `Nothing written yet. This run creates <b>${esc(s.suggested_name)}</b>.`;
+  } catch (e) { /* leave as-is */ }
+}
+
+function currentMode() {
+  const on = document.querySelector('input[name=mode]:checked');
+  return on ? on.value : 'batch';
+}
+
+function currentLayout() {
+  const on = document.querySelector('input[name=layout]:checked');
+  return on ? on.value : 'flat';
+}
+
+function applyMode() {
+  const batch = currentMode() === 'batch';
+  const flat = currentLayout() === 'flat';
+  $('flatCtrl').hidden = !batch;
+  $('pctCtrl').hidden = !(batch && !flat);
+  $('picksCtrl').hidden = batch;
+  $('shootList').hidden = !batch;
+  if (batch) refreshShoots();
+}
+
+async function refreshShoots() {
+  const path = $('source').value.trim();
+  try {
+    const d = await api('/api/shoots?path=' + encodeURIComponent(path));
+    const top = d.shoots.slice(0, 6)
+      .map((s) => `${esc(s.folder)} (${s.photos})`).join(', ');
+    $('shootList').innerHTML =
+      `<b>${d.count}</b> shoot folder(s), <b>${d.total_photos}</b> photo(s) total.` +
+      (d.count ? ` e.g. ${top}${d.count > 6 ? ', ...' : ''}` : '');
+  } catch (e) {
+    $('shootList').textContent = 'Could not list shoots: ' + e.message;
+  }
+}
+
+function readConfig() {
+  const w = {};
+  WEIGHTS.forEach((k) => { w[k] = Number($('w_' + k).value); });
+  return {
+    FACE_MATCH_THRESHOLD: Number($('match').value),
+    FACE_SCORE_THRESHOLD: Number($('detect').value),
+    DUPLICATE_HASH_THRESHOLD: Number($('dup').value),
+    FACE_PROMINENT_SIZE_RATIO: Number($('prominent').value),
+    GROUP_MIN_PEOPLE: Number($('groupmin').value),
+    QUALITY_WEIGHTS: w
+  };
+}
+
+/* ---------------- boot ---------------- */
+
+async function boot() {
+  STATE = await api('/api/state');
+  $('version').textContent = 'v' + STATE.version;
+  $('source').value = STATE.source;
+  $('workers').textContent = STATE.workers + ' worker processes';
+  $('prio').textContent = STATE.priority.join('   >   ');
+  $('soName').textContent = STATE.second_option;
+  $('modelstate').textContent = STATE.models_present
+    ? 'face models ready - runs fully offline, nothing uploaded'
+    : 'face models missing';
+  if (!STATE.models_present) {
+    notice('bad', 'Face models are missing. Run: python3 -m wedding_album download-models');
+  }
+
+  const c = STATE.config;
+  $('match').value = c.FACE_MATCH_THRESHOLD;
+  $('detect').value = c.FACE_SCORE_THRESHOLD;
+  $('dup').value = c.DUPLICATE_HASH_THRESHOLD;
+  $('prominent').value = c.FACE_PROMINENT_SIZE_RATIO;
+  $('groupmin').value = c.GROUP_MIN_PEOPLE;
+  $('picks').value = STATE.default_picks;
+  $('percent').value = STATE.default_percent;
+  $('top').value = STATE.default_top;
+  WEIGHTS.forEach((k) => { $('w_' + k).value = c.QUALITY_WEIGHTS[k]; });
+
+  ['match','detect','dup','prominent'].forEach((id) =>
+    bindRange(id, id === 'dup' ? 0 : (id === 'detect' ? 2 : 3)));
+  bindRange('picks', 0);
+  bindRange('percent', 0);
+  bindRange('top', 0);
+  $('percent').addEventListener('input', () => {
+    const p = Number($('percent').value);
+    $('percentOut').value = p + '%';
+  });
+  $('percentOut').value = $('percent').value + '%';
+  WEIGHTS.forEach((k) => bindRange('w_' + k, 2));
+
+  document.querySelectorAll('input[name=mode], input[name=layout]').forEach((r) =>
+    r.addEventListener('change', applyMode));
+
+  await refreshVersionHint();
+  await fbLoad(STATE.source);
+  applyMode();
+  await loadResult();
+}
+
+/* ---------------- run ---------------- */
+
+async function analyze() {
+  notice('', '');
+  const batchMode = currentMode() === 'batch';
+  const body = {
+    source: $('source').value.trim(),
+    limit: Number($('limit').value) || 0,
+    config: readConfig()
+  };
+  try {
+    if (batchMode) {
+      body.percent = Number($('percent').value);
+      body.drop_duplicates = $('dropdup').checked;
+      body.flat = currentLayout() === 'flat';
+      body.top = Number($('top').value);
+      await api('/api/batch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      body.picks = Number($('picks').value);
+      await api('/api/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+    poll();
+  } catch (e) { notice('bad', e.message); }
+}
+
+async function organize() {
+  notice('', '');
+  const batchMode = currentMode() === 'batch';
+  try {
+    if (batchMode) {
+      await api('/api/batch_write', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clean: $('clean').checked,
+          allow_unlabeled: $('allowun').checked
+        })
+      });
+    } else {
+      await api('/api/organize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          picks: Number($('picks').value),
+          skip_duplicates: false,
+          clean: $('clean').checked,
+          allow_unlabeled: $('allowun').checked,
+          output_name: $('outname').value.trim()
+        })
+      });
+    }
+    poll();
+  } catch (e) { notice('bad', e.message); }
+}
+
+function busy(on) { $('analyzeBtn').disabled = on; $('organizeBtn').disabled = on; }
+
+function poll() {
+  busy(true);
+  if (polling) clearInterval(polling);
+  polling = setInterval(tick, 400);
+  tick();
+}
+
+async function tick() {
+  let p;
+  try { p = await api('/api/progress'); } catch (e) { return; }
+  const pct = p.total ? Math.round(100 * p.current / p.total) : (p.running ? 8 : 0);
+  $('bar').style.width = pct + '%';
+  $('status').textContent = p.running
+    ? p.stage + (p.total ? ` - ${p.current}/${p.total} (${pct}%)` : '')
+    : 'Idle.';
+  if (!p.running) {
+    clearInterval(polling); polling = null; busy(false);
+    $('bar').style.width = p.error ? '0%' : '100%';
+    if (p.error) notice('bad', p.error);
+    else if (p.message) notice('ok', p.message);
+    await loadResult();
+    await refreshVersionHint();
+  }
+}
+
+/* ---------------- results ---------------- */
+
+async function loadResult() {
+  let d;
+  try { d = await api('/api/result'); } catch (e) { return; }
+  if (!d.analyzed) return;
+  LAST = d;
+  renderStats(d.stats);
+  renderPeople(d.people);
+
+  const batchMode = d.mode === 'batch';
+  if (batchMode) {
+    if (d.flat && d.albums && d.albums.length) renderAlbums(d.albums);
+    else renderShoots(d.shoots || []);
+  } else {
+    renderSections(d.sections || []);
+  }
+
+  $('statsPanel').hidden = false;
+  $('peoplePanel').hidden = false;
+  $('organizePanel').hidden = false;
+  $('shootsPanel').hidden = !batchMode;
+  $('sectionsPanel').hidden = batchMode;
+}
+
+function renderAlbums(list) {
+  $('shootTable').innerHTML = '';
+  const cards = list.map((al) => {
+    const shots = al.top.map((ph, i) => `
+      <div class="shot pick" title="${esc(ph.name + '\n' + ph.reason)}">
+        <span class="tag pick">${i + 1}</span>
+        <img loading="lazy" src="/api/thumb?p=${encodeURIComponent(ph.photo)}&w=240" alt="">
+        <span class="score">${ph.score}</span>
+        <div class="cap">${esc(ph.section)}</div>
+      </div>`).join('');
+    return `<div class="sec">
+      <div class="head">
+        <b>${esc(al.label)}</b>
+        <span class="meta">${al.top.length} in Top &middot; ${al.review_count} Review
+          &middot; ${al.others_count} Others &middot; from ${al.photos} photos
+          in ${al.groups} moments</span>
+      </div>
+      <div class="shots">${shots}</div>
+    </div>`;
+  }).join('');
+  $('sections').innerHTML = cards;
+  $('sectionsPanel').hidden = false;
+  $('shootsPanel').hidden = true;
+}
+
+function renderShoots(list) {
+  if (!list.length) { $('shootTable').innerHTML = ''; return; }
+
+  const head = `<tr style="text-align:left;color:var(--muted)">
+    <th style="padding:6px 8px">shoot folder</th>
+    <th style="padding:6px 8px;text-align:right">photos</th>
+    <th style="padding:6px 8px;text-align:right">dupes</th>
+    <th style="padding:6px 8px;text-align:right">kept</th>
+    <th style="padding:6px 8px;text-align:right">poses</th>
+    <th style="padding:6px 8px;text-align:right">picks</th>
+    <th style="padding:6px 8px">sections</th></tr>`;
+
+  const rows = list.map((s) => {
+    const secs = Object.keys(s.sections).sort()
+      .map((k) => `${k.replace(/^\d+_/, '')} ${s.sections[k]}`).join(', ');
+    const done = s.copied ? ` &#10003; ${esc(s.album)}` : '';
+    return `<tr style="border-top:1px solid var(--line)">
+      <td style="padding:6px 8px">${esc(s.folder)}${done}</td>
+      <td style="padding:6px 8px;text-align:right">${s.photos}</td>
+      <td style="padding:6px 8px;text-align:right;color:var(--warn)">${s.duplicates || ''}</td>
+      <td style="padding:6px 8px;text-align:right">${s.kept}</td>
+      <td style="padding:6px 8px;text-align:right">${s.groups}</td>
+      <td style="padding:6px 8px;text-align:right;color:var(--green)"><b>${s.pick_count}</b></td>
+      <td style="padding:6px 8px;color:var(--muted)">${esc(secs)}</td></tr>`;
+  }).join('');
+
+  const tp = list.reduce((a, s) => a + s.photos, 0);
+  const td = list.reduce((a, s) => a + s.duplicates, 0);
+  const tk = list.reduce((a, s) => a + s.pick_count, 0);
+  const total = `<tr style="border-top:2px solid var(--line);font-weight:600">
+    <td style="padding:6px 8px">${list.length} shoots</td>
+    <td style="padding:6px 8px;text-align:right">${tp}</td>
+    <td style="padding:6px 8px;text-align:right">${td}</td>
+    <td style="padding:6px 8px;text-align:right">${tp - td}</td>
+    <td style="padding:6px 8px"></td>
+    <td style="padding:6px 8px;text-align:right;color:var(--green)">${tk}</td>
+    <td style="padding:6px 8px;color:var(--muted)">${(100 * tk / (tp || 1)).toFixed(1)}% of everything</td></tr>`;
+
+  $('shootTable').innerHTML = head + rows + total;
+}
+
+function renderStats(s) {
+  const t = [
+    [s.total_photos, 'Photos'],
+    [s.picks, 'Will be picked'],
+    [s.shot_groups, 'Pose groups'],
+    [s.reduced + '%', 'Trimmed'],
+    [s.real_people, 'People'],
+    [s.unlabeled, 'To identify']
+  ];
+  $('tiles').innerHTML = t.map(([v, l]) =>
+    `<div class="tile"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  $('planNote').innerHTML =
+    `<b>${s.picks}</b> photo(s) will be picked out of <b>${s.total_photos}</b>, ` +
+    `spread across <b>${s.shot_groups}</b> pose group(s). ` +
+    `The remaining <b>${s.total_photos - s.picks}</b> are copied as alternatives.` +
+    (s.unlabeled ? ` <span style="color:var(--warn)">${s.unlabeled} person(s) still need identifying.</span>` : '');
+}
+
+function renderPeople(list) {
+  if (!list.length) { $('people').innerHTML = '<p class="empty">No faces found.</p>'; return; }
+  $('people').innerHTML = list.map((p) => {
+    const faces = p.faces.map((f) =>
+      `<img loading="lazy" src="/api/face?p=${encodeURIComponent(f.photo)}&box=${encodeURIComponent(f.box)}" alt="">`).join('');
+    const roles = STATE.roles.map((r) => {
+      const on = p.role === r ? (' on' + (r === 'ignore' ? ' ig' : '')) : '';
+      const text = r === 'ignore' ? 'Not a person' : r[0].toUpperCase() + r.slice(1);
+      return `<button class="role${on}" data-id="${p.id}" data-role="${r}">${text}</button>`;
+    }).join('');
+    return `<div class="person ${p.labeled ? '' : 'todo'}">
+      <div class="top">
+        <span class="pid">${p.id}</span>
+        <span class="meta">in ${p.photo_count} photo(s)</span>
+        ${p.name ? `<span class="meta">&middot; ${esc(p.name)}</span>` : ''}
+        ${p.note ? `<span class="meta">[${esc(p.note)}]</span>` : ''}
+        ${p.labeled ? '' : '<span class="meta" style="color:var(--warn)">&middot; who is this?</span>'}
+      </div>
+      <div class="faces">${faces}</div>
+      <div class="roles">${roles}</div>
+      <div class="naming">
+        <input type="text" placeholder="name (optional)" value="${esc(p.name)}" data-name="${p.id}">
+        <input type="text" placeholder="relation note, e.g. Sister" value="${esc(p.note)}" data-note="${p.id}">
+      </div></div>`;
+  }).join('');
+
+  $('people').querySelectorAll('button.role').forEach((b) =>
+    b.addEventListener('click', () => setRole(b.dataset.id, b.dataset.role)));
+}
+
+async function setRole(id, role) {
+  const n = $('people').querySelector(`[data-name="${id}"]`);
+  const t = $('people').querySelector(`[data-note="${id}"]`);
+  notice('', '');
+  try {
+    const d = await api('/api/label', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignments: [{
+        id, role, name: n ? n.value.trim() : '', note: t ? t.value.trim() : ''
+      }] })
+    });
+    renderStats(d.stats); renderPeople(d.people); renderSections(d.sections);
+  } catch (e) { notice('bad', e.message); }
+}
+
+function shotTile(ph) {
+  const tag = ph.pick ? `<span class="tag pick">PICK ${ph.pick_rank}</span>`
+    : (ph.duplicate ? '<span class="tag dup">REPEAT</span>' : '');
+  const title = `${ph.name}\n${ph.reason}` +
+    (ph.pick_reason ? `\nchosen as ${ph.pick_reason}` : '') +
+    (ph.duplicate ? `\nnear-duplicate of ${ph.duplicate_of}` : '');
+  return `<div class="shot ${ph.pick ? 'pick' : ''}" title="${esc(title)}">
+    ${tag}
+    <img loading="lazy" src="/api/thumb?p=${encodeURIComponent(ph.photo)}&w=240" alt="">
+    <span class="score">${ph.score}</span>
+    <div class="cap">${esc(ph.name)}</div></div>`;
+}
+
+function renderSections(list) {
+  if (!list.length) { $('sections').innerHTML = '<p class="empty">Nothing assigned yet.</p>'; return; }
+  $('sections').innerHTML = list.map((sec) => {
+    const groups = sec.groups.map((g) => {
+      const best = g.photos[0];
+      return `<div class="sgroup">
+        <div class="glabel">Pose group ${g.index} &middot; ${g.size} shot(s)
+          ${best && best.pick ? '&middot; best of this group was picked' : '&middot; not picked'}</div>
+        <div class="shots">${g.photos.map(shotTile).join('')}</div>
+      </div>`;
+    }).join('');
+    const why = sec.picks.length ? sec.picks[0].reason : '';
+    return `<div class="sec">
+      <div class="head">
+        <b>${sec.section}</b>
+        <span class="meta">${sec.pick_count} pick(s) from ${sec.count} photo(s) in ${sec.group_count} pose group(s)</span>
+        <span class="why">${esc(why)}</span>
+      </div>${groups}</div>`;
+  }).join('');
+}
+
+$('analyzeBtn').addEventListener('click', analyze);
+$('organizeBtn').addEventListener('click', organize);
+$('reloadBtn').addEventListener('click', loadResult);
+boot().catch((e) => notice('bad', 'Could not load: ' + e.message));
+</script>
+</body>
+</html>

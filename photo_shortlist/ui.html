@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Shortlist</title>
+<style>
+  :root {
+    --bg: #12100f;
+    --panel: #1c1a18;
+    --panel-2: #241f1d;
+    --line: #35302d;
+    --text: #f2ece6;
+    --muted: #a39a92;
+    --accent: #d8a25c;
+    --accent-ink: #231a0e;
+    --good: #7fb686;
+    --bad: #d98080;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 72px; }
+
+  header { margin-bottom: 28px; }
+  h1 { font-size: 24px; margin: 0 0 6px; font-weight: 600; letter-spacing: -0.2px; }
+  .sub { color: var(--muted); font-size: 14px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: var(--muted);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+
+  /* ---- drop zone ---- */
+  #drop {
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: var(--panel-2);
+  }
+  #drop:hover, #drop:focus-visible { border-color: var(--accent); outline: none; }
+  #drop.over { border-color: var(--accent); background: #2b2219; }
+  #drop .big { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  #drop .small { color: var(--muted); font-size: 13px; }
+  input[type=file] { display: none; }
+
+  /* ---- controls ---- */
+  .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 13px; color: var(--muted); }
+
+  input[type=number] {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 9px 11px;
+    font-size: 15px;
+    width: 92px;
+  }
+  input[type=range] { width: 190px; accent-color: var(--accent); }
+  input:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  /* ---- messages ---- */
+  .msg { padding: 11px 14px; border-radius: 7px; margin-bottom: 16px; font-size: 14px; }
+  .msg.ok { background: #1e2a1f; color: var(--good); border: 1px solid #2f4231; }
+  .msg.err { background: #2c1d1d; color: var(--bad); border: 1px solid #452b2b; }
+  [hidden] { display: none !important; }
+
+  /* ---- progress ---- */
+  .bar { height: 7px; background: var(--panel-2); border-radius: 4px; overflow: hidden; margin-top: 10px; }
+  .bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+
+  /* ---- film strip of uploads ---- */
+  .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .strip img { height: 64px; width: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+
+  /* ---- picks ---- */
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card.top { border-color: var(--accent); }
+  .shot { position: relative; display: block; background: #000; }
+  .shot img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; display: block; }
+  .badge {
+    position: absolute; top: 9px; left: 9px;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 12px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .score {
+    position: absolute; top: 9px; right: 9px;
+    background: rgba(0,0,0,.72); color: #fff;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .meta { padding: 12px 13px 14px; }
+  .fname {
+    font-size: 13px; font-weight: 600; margin-bottom: 5px;
+    word-break: break-all;
+  }
+  .why { font-size: 13px; color: var(--muted); }
+
+  .bars { margin-top: 11px; display: grid; gap: 5px; }
+  .metric { display: grid; grid-template-columns: 74px 1fr; gap: 9px; align-items: center; font-size: 11px; color: var(--muted); }
+  .metric .track { height: 5px; background: #322c28; border-radius: 3px; overflow: hidden; }
+  .metric .fill { height: 100%; background: var(--muted); }
+
+  /* ---- groups ---- */
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 7px 0; }
+  summary:hover { color: var(--text); }
+  .group { border-top: 1px solid var(--line); padding: 14px 0; }
+  .group h3 { font-size: 13px; margin: 0 0 9px; font-weight: 600; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 9px; }
+  .tile { width: 118px; }
+  .tile img { width: 118px; height: 79px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); display: block; }
+  .tile.chosen img { border-color: var(--accent); }
+  .tile .cap { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .dup { color: var(--bad); }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 4px; }
+  .stat .n { font-size: 20px; font-weight: 600; }
+  .stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Photo Shortlist</h1>
+    <div class="sub">Add your photos, choose how many you want, and get the best of the set.</div>
+  </header>
+
+  <div id="banner" class="msg" hidden role="status" aria-live="polite"></div>
+
+  <!-- 1. ADD PHOTOS -->
+  <section class="panel">
+    <h2>1 &middot; Add photos</h2>
+
+    <div id="drop" role="button" tabindex="0"
+         aria-label="Choose photos, or drag and drop them here">
+      <div class="big">Drag photos here, or click to choose</div>
+      <div class="small" id="dropHint">JPG, PNG, TIFF, BMP or WebP</div>
+    </div>
+    <input type="file" id="files" multiple accept="image/*">
+
+    <div id="uploaded" hidden style="margin-top:16px">
+      <div class="row" style="justify-content:space-between; margin-bottom:10px">
+        <strong id="uploadCount">0 photos ready</strong>
+        <button type="button" id="reset">Start over</button>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
+  </section>
+
+  <!-- 2. SHORTLIST -->
+  <section class="panel">
+    <h2>2 &middot; Shortlist</h2>
+    <div class="row">
+      <div class="field">
+        <label for="wantRange">How many photos do you want?</label>
+        <div class="row" style="gap:12px; align-items:center">
+          <input type="range" id="wantRange" min="1" max="20" value="5">
+          <input type="number" id="want" min="1" max="20" value="5"
+                 aria-label="Number of photos to pick">
+        </div>
+      </div>
+      <div class="field">
+        <label class="check" for="skipDupes">
+          <input type="checkbox" id="skipDupes" checked>
+          Avoid near-identical frames
+        </label>
+      </div>
+      <div class="field">
+        <button type="button" id="go" class="primary" disabled>Find the best photos</button>
+      </div>
+    </div>
+
+    <div id="progress" hidden>
+      <div style="margin-top:16px; font-size:13px; color:var(--muted)" id="stage"></div>
+      <div class="bar"><span id="fill"></span></div>
+    </div>
+  </section>
+
+  <!-- 3. RESULTS -->
+  <section class="panel" id="results" hidden>
+    <h2>3 &middot; Your picks</h2>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="row" style="margin:16px 0 20px">
+      <button type="button" id="download" class="primary">Download these photos</button>
+    </div>
+
+    <div class="picks" id="picks"></div>
+
+    <details id="allShots">
+      <summary id="allShotsLabel">Show every shot and why it lost</summary>
+      <div id="groups"></div>
+    </details>
+  </section>
+
+  <footer>
+    Runs entirely on this machine. No upload leaves your computer, no API key, no cloud.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+const METRIC_LABELS = {
+  sharpness: "Sharpness",
+  exposure: "Exposure",
+  contrast: "Contrast",
+  saturation: "Colour",
+  noise: "Low noise"
+};
+
+let polling = null;
+
+/* ---------------------------------------------------------------- helpers */
+
+function banner(text, kind) {
+  const el = $("banner");
+  if (!text) { el.hidden = true; return; }
+  el.textContent = text;
+  el.className = "msg " + (kind === "err" ? "err" : "ok");
+  el.hidden = false;
+}
+
+function thumb(name, width) {
+  return "/api/thumb?w=" + width + "&p=" + encodeURIComponent(name);
+}
+
+async function api(route, options) {
+  const response = await fetch(route, options);
+  let data = {};
+  try { data = await response.json(); } catch (err) { /* no body */ }
+  if (!response.ok) throw new Error(data.error || ("Request failed: " + response.status));
+  return data;
+}
+
+/* ------------------------------------------------------------------ state */
+
+async function refreshState() {
+  const state = await api("/api/state");
+
+  $("want").max = state.max_want;
+  $("wantRange").max = state.max_want;
+  $("dropHint").textContent =
+    state.extensions.join(", ") + " \u00b7 up to " + state.max_files + " photos";
+
+  showUploads(state.uploaded, state.names);
+  return state;
+}
+
+function showUploads(count, names) {
+  $("uploaded").hidden = count === 0;
+  $("go").disabled = count === 0;
+  $("uploadCount").textContent =
+    count === 1 ? "1 photo ready" : count + " photos ready";
+
+  const strip = $("strip");
+  strip.innerHTML = "";
+  names.slice(0, 60).forEach((name) => {
+    const img = document.createElement("img");
+    img.src = thumb(name, 128);
+    img.alt = name;
+    img.loading = "lazy";
+    strip.appendChild(img);
+  });
+}
+
+/* ----------------------------------------------------------------- upload */
+
+async function upload(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  banner("Adding " + files.length + " photo(s)\u2026", "ok");
+
+  const form = new FormData();
+  files.forEach((file) => form.append("photos", file, file.name));
+
+  try {
+    const data = await api("/api/upload", { method: "POST", body: form });
+    showUploads(data.uploaded, data.names);
+    $("results").hidden = true;
+
+    let note = "Added " + data.stored + " photo(s). " + data.uploaded + " ready.";
+    if (data.skipped && data.skipped.length) {
+      note += " Skipped " + data.skipped.length + ": " + data.skipped[0];
+    }
+    banner(note, data.stored ? "ok" : "err");
+  } catch (err) {
+    banner(err.message, "err");
+  }
+}
+
+/* -------------------------------------------------------------- shortlist */
+
+async function start() {
+  banner("", null);
+  $("results").hidden = true;
+  $("progress").hidden = false;
+  $("go").disabled = true;
+
+  try {
+    await api("/api/shortlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        want: parseInt($("want").value, 10),
+        skip_duplicates: $("skipDupes").checked
+      })
+    });
+    poll();
+  } catch (err) {
+    $("progress").hidden = true;
+    $("go").disabled = false;
+    banner(err.message, "err");
+  }
+}
+
+function poll() {
+  if (polling) clearInterval(polling);
+  polling = setInterval(async () => {
+    let p;
+    try {
+      p = await api("/api/progress");
+    } catch (err) {
+      return;
+    }
+
+    const pct = p.total ? Math.round((p.current / p.total) * 100) : 0;
+    $("fill").style.width = pct + "%";
+    $("stage").textContent = p.stage
+      ? p.stage + (p.total ? "  " + p.current + " / " + p.total : "")
+      : "";
+
+    if (p.running) return;
+
+    clearInterval(polling);
+    polling = null;
+    $("progress").hidden = true;
+    $("go").disabled = false;
+
+    if (p.error) { banner(p.error, "err"); return; }
+    if (p.message) banner(p.message, "ok");
+    if (p.ready) render(await api("/api/result"));
+  }, 400);
+}
+
+/* ------------------------------------------------------------------ render */
+
+function metricBars(breakdown) {
+  const wrap = document.createElement("div");
+  wrap.className = "bars";
+
+  Object.keys(METRIC_LABELS).forEach((key) => {
+    if (!(key in breakdown)) return;
+    const value = Math.round(breakdown[key] * 100);
+
+    const row = document.createElement("div");
+    row.className = "metric";
+
+    const name = document.createElement("span");
+    name.textContent = METRIC_LABELS[key];
+
+    const track = document.createElement("span");
+    track.className = "track";
+    track.setAttribute("role", "img");
+    track.setAttribute("aria-label", METRIC_LABELS[key] + ": " + value + " out of 100");
+
+    const fill = document.createElement("span");
+    fill.className = "fill";
+    fill.style.width = value + "%";
+    track.appendChild(fill);
+
+    row.appendChild(name);
+    row.appendChild(track);
+    wrap.appendChild(row);
+  });
+
+  return wrap;
+}
+
+function pickCard(photo) {
+  const card = document.createElement("div");
+  card.className = "card" + (photo.rank === 1 ? " top" : "");
+
+  const link = document.createElement("a");
+  link.className = "shot";
+  link.href = "/api/full?p=" + encodeURIComponent(photo.photo);
+  link.target = "_blank";
+  link.rel = "noopener";
+
+  const img = document.createElement("img");
+  img.src = thumb(photo.photo, 560);
+  img.alt = photo.reason ? photo.name + ": " + photo.reason : photo.name;
+  img.loading = "lazy";
+  link.appendChild(img);
+
+  const badge = document.createElement("span");
+  badge.className = "badge";
+  badge.textContent = "#" + photo.rank;
+  link.appendChild(badge);
+
+  const score = document.createElement("span");
+  score.className = "score";
+  score.textContent = photo.score;
+  link.appendChild(score);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+
+  const name = document.createElement("div");
+  name.className = "fname";
+  name.textContent = photo.name;
+
+  const why = document.createElement("div");
+  why.className = "why";
+  why.textContent = photo.reason;
+
+  meta.appendChild(name);
+  meta.appendChild(why);
+  meta.appendChild(metricBars(photo.breakdown || {}));
+
+  card.appendChild(link);
+  card.appendChild(meta);
+  return card;
+}
+
+function statBlock(number, label) {
+  const stat = document.createElement("div");
+  stat.className = "stat";
+  const n = document.createElement("div");
+  n.className = "n";
+  n.textContent = number;
+  const l = document.createElement("div");
+  l.className = "l";
+  l.textContent = label;
+  stat.appendChild(n);
+  stat.appendChild(l);
+  return stat;
+}
+
+function groupBlock(group) {
+  const block = document.createElement("div");
+  block.className = "group";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "Shot " + group.index + " \u00b7 " +
+    (group.size === 1 ? "1 frame" : group.size + " similar frames");
+  block.appendChild(heading);
+
+  const tiles = document.createElement("div");
+  tiles.className = "tiles";
+
+  group.photos.forEach((photo) => {
+    const tile = document.createElement("div");
+    tile.className = "tile" + (photo.pick ? " chosen" : "");
+
+    const link = document.createElement("a");
+    link.href = "/api/full?p=" + encodeURIComponent(photo.photo);
+    link.target = "_blank";
+    link.rel = "noopener";
+
+    const img = document.createElement("img");
+    img.src = thumb(photo.photo, 240);
+    img.alt = photo.name;
+    img.loading = "lazy";
+    link.appendChild(img);
+
+    const cap = document.createElement("div");
+    cap.className = "cap" + (photo.duplicate ? " dup" : "");
+    let text = photo.score + (photo.pick ? "  \u00b7  picked #" + photo.rank : "");
+    if (photo.duplicate) text += "  \u00b7  near-duplicate";
+    cap.textContent = text;
+
+    tile.appendChild(link);
+    tile.appendChild(cap);
+    tiles.appendChild(tile);
+  });
+
+  block.appendChild(tiles);
+  return block;
+}
+
+function render(result) {
+  if (!result.ready) return;
+
+  const stats = $("stats");
+  stats.innerHTML = "";
+  stats.appendChild(statBlock(result.stats.analyzed, "analyzed"));
+  stats.appendChild(statBlock(result.stats.shots, "distinct shots"));
+  stats.appendChild(statBlock(result.stats.picked, "picked"));
+  if (result.stats.duplicates) {
+    stats.appendChild(statBlock(result.stats.duplicates, "near-duplicates"));
+  }
+  if (result.stats.unreadable) {
+    stats.appendChild(statBlock(result.stats.unreadable, "unreadable"));
+  }
+
+  const picks = $("picks");
+  picks.innerHTML = "";
+  result.picks.forEach((photo) => picks.appendChild(pickCard(photo)));
+
+  const groups = $("groups");
+  groups.innerHTML = "";
+  result.groups.forEach((group) => groups.appendChild(groupBlock(group)));
+
+  $("allShotsLabel").textContent =
+    "Show all " + result.stats.analyzed + " photos, grouped by shot";
+
+  $("results").hidden = false;
+  $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ------------------------------------------------------------------ wiring */
+
+$("drop").addEventListener("click", () => $("files").click());
+$("drop").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    $("files").click();
+  }
+});
+
+["dragenter", "dragover"].forEach((name) => {
+  $("drop").addEventListener(name, (event) => {
+    event.preventDefault();
+    $("drop").classList.add("over");
+  });
+});
+["dragleave", "drop"].forEach((name) => {
+  $("drop").addEventListener(name, (event) => {
+    event.preventDefault();
+    $("drop").classList.remove("over");
+  });
+});
+$("drop").addEventListener("drop", (event) => {
+  upload(event.dataTransfer.files);
+});
+
+$("files").addEventListener("change", (event) => {
+  upload(event.target.files);
+  event.target.value = "";             // so the same file can be re-added
+});
+
+$("want").addEventListener("input", () => { $("wantRange").value = $("want").value; });
+$("wantRange").addEventListener("input", () => { $("want").value = $("wantRange").value; });
+
+$("go").addEventListener("click", start);
+
+$("download").addEventListener("click", () => {
+  window.location = "/api/download";
+});
+
+$("reset").addEventListener("click", async () => {
+  try {
+    await api("/api/reset", { method: "POST" });
+    $("results").hidden = true;
+    showUploads(0, []);
+    banner("Cleared. Add a new set of photos.", "ok");
+  } catch (err) {
+    banner(err.message, "err");
+  }
+});
+
+refreshState().catch((err) => banner(err.message, "err"));
+</script>
+</body>
+</html>

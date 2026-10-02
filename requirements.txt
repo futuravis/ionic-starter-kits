@@ -1,0 +1,21 @@
+# wedding_album package
+#
+# Runs fully offline on the CPU. Face recognition uses OpenCV's built-in DNN
+# engine with ONNX weights fetched once by:
+#
+#     python3 -m wedding_album download-models
+#
+# No API key, no cloud service, no per-image cost.
+
+# FaceDetectorYN / FaceRecognizerSF need >=4.8. Verified working on 5.0.0,
+# which is what this machine has. Not pinned to 4.10: OpenCV 5 dropped the
+# bundled Haar cascades and the package deliberately avoids them.
+opencv-python>=4.8
+
+numpy>=1.24.0
+
+# --- only used by the legacy standalone image_curator.py -------------------
+# That script predates this package, scores on technical quality alone, and its
+# Haar-cascade face step is broken on OpenCV 5. Kept for reference only.
+Pillow>=10.0.0
+ImageHash>=4.3.1

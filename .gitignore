@@ -1,0 +1,79 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# ---------------------------------------------------------------------------
+# Machine learning models - 38 MB of ONNX binaries
+# ---------------------------------------------------------------------------
+# Deliberately excluded. Git stores binaries badly: every re-download would
+# add another full copy to the history and the repository would never shrink
+# again. They are fetched on demand instead:
+#
+#     python3 -m wedding_album download-models
+#
+models/
+
+# ---------------------------------------------------------------------------
+# Generated output
+# ---------------------------------------------------------------------------
+# Album runs write versioned folders in place next to the source photos.
+BestImages*/
+.wedding_album/
+thumbs/
+
+# Photo Shortlist holds uploads in a temp directory, but catch any that are
+# written into the project by mistake.
+photo_shortlist_*/
+
+# ---------------------------------------------------------------------------
+# Editors and operating systems
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# Secrets - nothing of the sort exists in this project today, and this is here
+# to keep it that way.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Test and coverage artifacts
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
