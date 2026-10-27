@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Studio &mdash; 11-step funnel with parameters (v4 mockup)</title>
+<style>
+/* ==========================================================================
+   FUNNEL MOCKUP v4 - DESIGN ONLY, NOTHING WIRED UP
+   11 steps. Each removal step exposes the real parameters the engine uses,
+   with guidance on how to choose them. Default values are the actual
+   constants from diagnose.py, shortlist.py, vertical.py and config.py.
+   Counts come from the real 40-photo batch.
+   ========================================================================== */
+:root{
+  --paper:#fbfaf8; --card:#fff; --sunk:#f4f2ee; --rule:#e4e0d8; --rule-s:#d2ccc0;
+  --ink:#1c1a17; --ink-soft:#5c564d; --ink-faint:#8d867a;
+  --accent:#a8562f; --accent-soft:#f6ece6;
+  --major:#a33a32; --major-soft:#fbeae8;
+  --minor:#8a6420; --minor-soft:#fbf2e0;
+  --clean:#3d6b45; --clean-soft:#ebf3ec;
+  --note:#2f5d8a; --note-soft:#eaf1f8;
+  --keep:#1f6f8b; --keep-soft:#e6f2f6;
+  --nb:#6b3fa0; --nb-soft:#f1ebfa;
+  --r:12px; --r-sm:8px;
+  --shadow:0 1px 2px rgba(28,26,23,.05),0 8px 24px rgba(28,26,23,.05);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.shell{max-width:1300px;margin:0 auto;padding:0 24px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.mock{background:#2b2724;color:#f3efe9;padding:9px 0;font-size:13px}
+.mock .shell{display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+.mock .t{background:rgba(255,255,255,.14);padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.05em}
+.mock b{color:#e8b887}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:rgba(251,250,248,.95);backdrop-filter:blur(10px) saturate(160%);border-bottom:1px solid var(--rule)}
+.top-in{display:flex;align-items:center;justify-content:space-between;gap:16px;height:56px}
+.brand{display:flex;align-items:center;gap:10px}
+.mk{width:21px;height:21px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#d08a52)}
+.bn{font-weight:650;letter-spacing:-.01em}
+.live{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--ink-soft)}
+.live .big{font:700 19px var(--mono);color:var(--ink)}
+.kept-chip{display:inline-flex;align-items:center;gap:6px;background:var(--keep-soft);color:var(--keep);border:1px solid #c5dde5;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:650}
+
+/* rail */
+.rail{border-bottom:1px solid var(--rule);background:var(--card)}
+.rail-in{display:flex;overflow-x:auto}
+.rl{flex:1 1 0;min-width:92px;border:0;background:none;cursor:pointer;padding:9px 7px 8px;text-align:left;border-right:1px solid var(--rule);position:relative;font:inherit}
+.rl:last-child{border-right:0}
+.rl:hover{background:var(--sunk)}
+.rl .k{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700}
+.rl .nm{font-size:11.5px;font-weight:600;margin-top:1px;color:var(--ink-soft);line-height:1.25}
+.rl .ct{font:700 15px var(--mono);margin-top:2px;color:var(--ink)}
+.rl .dl{font-size:9.5px;font-weight:650;color:var(--ink-faint)}
+.rl .dl.cut{color:var(--major)}
+.rl.on{background:var(--accent-soft)}
+.rl.on .nm{color:var(--accent)}
+.rl.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--accent)}
+.rl.nb .nm{color:var(--nb)}
+.rl .nbt{position:absolute;top:4px;right:4px;background:var(--nb);color:#fff;font-size:7.5px;font-weight:800;padding:1px 4px;border-radius:99px}
+
+/* panels */
+.panel{padding:30px 0 20px}
+h1{font-size:27px;line-height:1.2;margin:0 0 7px;letter-spacing:-.022em;font-weight:660}
+.lede{margin:0;color:var(--ink-soft);max-width:70ch}
+.head{margin-bottom:20px}
+
+/* tally */
+.tally{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow);flex-wrap:wrap}
+.tally .blk{text-align:center}
+.tally .n{font:700 30px var(--mono);line-height:1;letter-spacing:-.02em}
+.tally .l{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:700;margin-top:4px}
+.tally .arw{font-size:21px;color:var(--ink-faint)}
+.tally .cut .n{color:var(--major)}
+.tally .out .n{color:var(--clean)}
+.tally .why{flex:1 1 200px;font-size:13px;color:var(--ink-soft);border-left:1px solid var(--rule);padding-left:18px}
+@media(max-width:760px){.tally .why{border-left:0;padding-left:0}}
+.fbar{height:9px;border-radius:99px;background:var(--sunk);overflow:hidden;display:flex;margin-top:11px}
+.fbar span{display:block;height:100%}
+.fbar .keepb{background:var(--clean)} .fbar .dropb{background:var(--major)}
+.fkey{display:flex;gap:14px;font-size:11px;color:var(--ink-faint);margin-top:6px;flex-wrap:wrap}
+.fkey i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.fkey .a i{background:var(--clean)} .fkey .b i{background:var(--major)}
+
+/* ---- PARAMETER PANEL ---- */
+.params{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.params-h{padding:14px 20px;border-bottom:1px solid var(--rule);background:var(--sunk);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.params-h h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:700}
+.params-h .reset{font:inherit;font-size:11.5px;font-weight:600;background:none;border:0;color:var(--accent);cursor:pointer;text-decoration:underline}
+.params-b{padding:6px 20px 18px}
+
+.prm{padding:16px 0;border-bottom:1px dashed var(--rule)}
+.prm:last-child{border-bottom:0}
+.prm-top{display:grid;grid-template-columns:1fr 150px;gap:18px;align-items:center}
+@media(max-width:700px){.prm-top{grid-template-columns:1fr}}
+.prm-name{font-size:14px;font-weight:620}
+.prm-code{font:10.5px var(--mono);color:var(--ink-faint);margin-top:2px}
+.prm-ctl{display:flex;align-items:center;gap:10px}
+.prm-ctl input[type=range]{flex:1;accent-color:var(--accent)}
+.prm-val{font:700 13px var(--mono);color:var(--accent);min-width:52px;text-align:right}
+.prm-how{margin:9px 0 0;font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:84ch}
+.prm-how b{color:var(--ink)}
+.prm-how .ex{display:inline-block;background:var(--sunk);border:1px solid var(--rule);border-radius:4px;padding:0 5px;font:11px var(--mono);color:var(--ink-soft)}
+.prm-scale{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--ink-faint);margin-top:4px}
+.prm-hits{font-size:11.5px;font-weight:650;color:var(--major);margin-top:7px}
+.prm-hits.none{color:var(--clean)}
+.prm.offp{opacity:.5}
+.prm-toggle{display:flex;align-items:center;gap:9px;cursor:pointer}
+.prm-toggle input{width:17px;height:17px;accent-color:var(--major);cursor:pointer}
+
+/* placeholders */
+.ph{position:relative;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;display:grid;place-items:center;color:var(--ink-faint);font:11px var(--mono);text-align:center}
+.ph::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 9px,rgba(0,0,0,.022) 9px,rgba(0,0,0,.022) 18px)}
+.ph s{position:relative;z-index:1;padding:4px;text-decoration:none}
+.ph.land{aspect-ratio:3/2} .ph.port{aspect-ratio:2/3}
+.ph.rot s{transform:rotate(-90deg);white-space:nowrap}
+.pin{position:absolute;top:6px;left:6px;background:rgba(28,26,23,.8);color:#fff;font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2}
+.pin.gold{background:var(--accent)}
+.tab{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.94);font:700 11px/1 var(--mono);padding:4px 8px;border-radius:99px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.emo{position:absolute;bottom:6px;left:6px;background:rgba(107,63,160,.9);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:99px;z-index:2}
+.why2{position:absolute;bottom:6px;left:6px;right:6px;background:rgba(28,26,23,.78);color:#fff;font:9.5px/1.3 var(--mono);padding:4px 6px;border-radius:5px;z-index:2}
+.xmark{position:absolute;inset:0;background:rgba(163,58,50,.17);z-index:3;display:grid;place-items:center}
+.xmark b{background:var(--major);color:#fff;font-size:11px;font-weight:700;padding:4px 11px;border-radius:99px;text-transform:uppercase}
+.lockmark{position:absolute;inset:0;background:rgba(31,111,139,.14);z-index:3;display:grid;place-items:start end;padding:7px}
+.lockmark b{background:var(--keep);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase}
+
+/* grids */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:13px}
+.grid-w{grid-template-columns:repeat(auto-fill,minmax(234px,1fr))}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.card.cut{border-color:#eccfca}
+.card.locked{border-color:var(--keep);box-shadow:0 0 0 2px var(--keep-soft),var(--shadow)}
+.card.sel{border-color:var(--accent)}
+.cm{padding:9px 11px 11px}
+.fn{font:10.5px var(--mono);color:var(--ink-faint);word-break:break-all;margin-bottom:3px}
+.st{font-size:12px;font-weight:620}
+.st.major{color:var(--major)} .st.minor{color:var(--minor)} .st.clean{color:var(--clean)} .st.nb{color:var(--nb)}
+.alsofail{font-size:10.5px;color:var(--ink-faint);margin-top:3px}
+.keepbtn{margin-top:8px;width:100%;font:inherit;font-size:12px;font-weight:650;padding:6px 10px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.keepbtn:hover{border-color:var(--keep);color:var(--keep)}
+.keepbtn.on{background:var(--keep);border-color:var(--keep);color:#fff}
+
+/* buttons */
+.btn{display:inline-block;font:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none;text-align:center}
+.btn:hover{border-color:var(--ink-faint)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-p:hover{background:#964926}
+.btn-q{background:transparent}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-big{padding:13px 24px;font-size:15px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:30px;padding-top:18px;border-top:1px solid var(--rule)}
+
+/* notes */
+.dn{background:var(--note-soft);border:1px solid #d3e2f0;border-left:3px solid var(--note);border-radius:var(--r-sm);padding:13px 16px;margin:18px 0}
+.dn h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--note);font-weight:700}
+.dn p{margin:0 0 7px;font-size:13.5px;color:#2c4a66;line-height:1.55}
+.dn p:last-child{margin:0}
+.dn code{font:12px var(--mono);background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #d3e2f0}
+.dn .f{display:inline-block;background:var(--note);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-right:7px;vertical-align:1px}
+.dn.warn{background:var(--minor-soft);border-color:#f0e2c4;border-left-color:var(--minor)}
+.dn.warn h4,.dn.warn p{color:#6d4f19} .dn.warn .f{background:var(--minor)} .dn.warn code{border-color:#f0e2c4}
+.dn.build{background:var(--nb-soft);border-color:#dfd2f0;border-left-color:var(--nb)}
+.dn.build h4,.dn.build p{color:#4a2b71} .dn.build .f{background:var(--nb)} .dn.build code{border-color:#dfd2f0}
+.dn.keepn{background:var(--keep-soft);border-color:#c5dde5;border-left-color:var(--keep)}
+.dn.keepn h4,.dn.keepn p{color:#15505f} .dn.keepn .f{background:var(--keep)}
+
+.empty{background:var(--clean-soft);border:1px solid #cfe0d2;border-radius:var(--r);padding:26px 22px;text-align:center}
+.empty .big{font-size:17px;font-weight:650;color:#2f5538;margin:0 0 5px}
+.empty p{margin:0;font-size:13px;color:#3d6b45}
+.nbbanner{background:var(--nb-soft);border:1px solid #dfd2f0;border-radius:var(--r);padding:15px 18px;margin-bottom:18px;display:flex;gap:13px;align-items:flex-start}
+.nbbanner .lab{background:var(--nb);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:99px;flex:0 0 auto;margin-top:2px}
+.nbbanner p{margin:0;font-size:13.5px;color:#4a2b71;line-height:1.55}
+
+.sect-t{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:680;margin:28px 0 6px}
+.sect-n{margin:0 0 14px;font-size:14px;color:var(--ink-soft);max-width:74ch}
+
+/* winner */
+.winner{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.85fr);gap:22px;background:var(--card);border:2px solid var(--accent);border-radius:var(--r);padding:20px;box-shadow:0 0 0 4px var(--accent-soft),var(--shadow)}
+@media(max-width:860px){.winner{grid-template-columns:1fr}}
+.bs{font:700 52px/1 var(--sans);letter-spacing:-.035em}
+.bs small{font-size:17px;font-weight:600;color:var(--ink-faint)}
+.vl{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.vl li{display:grid;grid-template-columns:9px 1fr;gap:10px;font-size:13.5px}
+.vl .p{width:9px;height:9px;border-radius:50%;margin-top:7px;background:var(--clean)}
+.vl .w{font-weight:640} .vl .y{color:var(--ink-soft)}
+.mb{margin-top:12px;display:grid;gap:6px}
+.mr{display:grid;grid-template-columns:66px 1fr 26px;gap:9px;align-items:center;font-size:11.5px;color:var(--ink-soft)}
+.mr .t{height:5px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.mr .f{display:block;height:100%;background:var(--ink-faint)} .mr .f.hi{background:var(--clean)}
+.mr .v{text-align:right;font:11px var(--mono);color:var(--ink-faint)}
+.journey{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:3px;font-size:13px}
+.journey li{display:grid;grid-template-columns:24px 1fr auto auto;gap:12px;align-items:center;color:var(--ink-soft);padding:3px 0}
+.journey .n{font:700 12px var(--mono);color:var(--ink-faint);text-align:right}
+.journey .d{font:700 11px var(--mono);color:var(--major);min-width:34px;text-align:right}
+.journey .c{font:700 12px var(--mono);color:var(--ink);min-width:28px;text-align:right}
+.journey li.nbl{color:var(--nb)} .journey li.kl{color:var(--keep)}
+
+/* ---- people bands ---- */
+.bandrow{display:grid;grid-template-columns:1fr 92px 190px;gap:14px;align-items:center;
+  padding:11px 12px;border:1px solid var(--rule);border-radius:var(--r-sm);background:var(--card)}
+@media(max-width:760px){.bandrow{grid-template-columns:1fr auto}.bandrow .bandctl{grid-column:1/-1}}
+.bandrow.off{opacity:.45}
+.bandname{font-size:13.5px;font-weight:620}
+.bandcount{font-size:11.5px;color:var(--ink-faint);text-align:right}
+.bandctl{display:flex;align-items:center;gap:9px}
+.bandctl input[type=range]{flex:1;accent-color:var(--accent)}
+.quota-sum{margin-top:12px;padding:11px 14px;border-radius:var(--r-sm);font-size:13px;
+  background:var(--clean-soft);border:1px solid #cfe0d2;color:#2f5538;font-weight:600}
+.quota-sum.over{background:var(--minor-soft);border-color:#f0e2c4;color:#6d4f19}
+.bandgrid{display:grid;gap:20px}
+.bandcard{border:1px solid var(--rule);border-radius:var(--r);background:var(--card);
+  padding:15px 17px 17px;box-shadow:var(--shadow)}
+.bandcard.off{opacity:.42}
+.bandhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.bh-t{font-size:14px;font-weight:650}
+.bh-c{font-size:11.5px;color:var(--ink-faint)}
+
+/* ---- destination / export ---- */
+.dest-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.dest-grid{grid-template-columns:1fr}}
+.radio-list{display:grid;gap:8px}
+.radio-row{display:grid;grid-template-columns:18px 1fr;gap:11px;align-items:start;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r-sm);cursor:pointer;background:var(--card)}
+.radio-row:hover{border-color:var(--rule-s);background:var(--sunk)}
+.radio-row.on{border-color:var(--accent);background:var(--accent-soft)}
+.radio-row input{margin-top:3px;accent-color:var(--accent);width:16px;height:16px}
+.radio-row .rl2{font-size:13px;font-weight:600}
+.radio-row .rp{font:10.5px var(--mono);color:var(--ink-faint);word-break:break-all;margin-top:2px}
+.radio-row .rx{font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.45}
+.txtin{width:100%;font:inherit;font-size:14px;padding:10px 12px;border-radius:7px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink);font-family:var(--mono)}
+.txtin:focus{border-color:var(--accent);outline:none}
+.sugg{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.sugg button{font:inherit;font-size:11.5px;font-family:var(--mono);font-weight:600;padding:5px 10px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.sugg button:hover{border-color:var(--accent);color:var(--accent)}
+.sugg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pathbox{background:#201c1a;color:#e8e3db;border-radius:var(--r-sm);padding:14px 16px;margin-top:16px;font:12px/1.7 var(--mono);overflow-x:auto}
+.pathbox .lbl{color:#8d867a;font-size:10px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px}
+.pathbox .full{color:#e8b887;word-break:break-all}
+.pathbox .tree{margin-top:10px;color:#bdb6ac;white-space:pre}
+.pathbox .tree b{color:#fff;font-weight:600}
+.warnrow{display:flex;gap:10px;align-items:flex-start;background:var(--minor-soft);border:1px solid #f0e2c4;border-radius:var(--r-sm);padding:11px 13px;margin-top:14px;font-size:12.5px;color:#6d4f19;line-height:1.5}
+.warnrow .ic{flex:0 0 auto;font-weight:700}
+.chk-list{display:grid;gap:9px;margin-top:4px}
+.chk-row{display:grid;grid-template-columns:18px 1fr;gap:11px;align-items:start;font-size:13px}
+.chk-row input{margin-top:3px;accent-color:var(--clean);width:16px;height:16px;cursor:pointer}
+.chk-row .cx{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin-top:1px}
+
+/* ---- rejected pile: available on every step ---- */
+.pile{border:1px solid var(--rule);border-radius:var(--r);background:var(--card);box-shadow:var(--shadow);margin:26px 0 0;overflow:hidden}
+.pile-h{width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--sunk);border:0;border-bottom:1px solid var(--rule);cursor:pointer;font:inherit;text-align:left}
+.pile-h:hover{background:#efece6}
+.pile-h .caret{font-size:11px;color:var(--ink-faint);transition:transform .15s;flex:0 0 auto}
+.pile.open .pile-h .caret{transform:rotate(90deg)}
+.pile-h .ttl{font-size:13px;font-weight:650;flex:1}
+.pile-h .cnt{font:700 12px var(--mono);background:var(--major-soft);color:var(--major);border:1px solid #f0cfcb;padding:3px 9px;border-radius:99px}
+.pile-h .cnt.zero{background:var(--clean-soft);color:var(--clean);border-color:#cfe0d2}
+.pile-b{padding:16px 18px 18px}
+.pile.closed .pile-b{display:none}
+.pile-note{margin:0 0 14px;font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:84ch}
+.pile-group{margin-bottom:18px}
+.pile-group:last-child{margin-bottom:0}
+.pile-gh{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.pile-gh .sq{width:7px;height:7px;border-radius:2px;background:var(--major)}
+.pile-row{display:flex;gap:10px;flex-wrap:wrap}
+.pile-item{width:132px}
+.pile-item .ph{margin-bottom:6px;opacity:.62}
+.pile-item.back .ph{opacity:1;outline:2px solid var(--keep);outline-offset:-2px}
+.pile-item .nm{font:10px var(--mono);color:var(--ink-faint);word-break:break-all}
+.pile-item .rs{font-size:10.5px;color:var(--major);margin:2px 0 5px;line-height:1.35}
+.pile-item.back .rs{color:var(--keep)}
+.backbtn{width:100%;font:inherit;font-size:11px;font-weight:650;padding:5px 8px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.backbtn:hover{border-color:var(--keep);color:var(--keep)}
+.backbtn.on{background:var(--keep);border-color:var(--keep);color:#fff}
+.pile-empty{font-size:13px;color:var(--clean);background:var(--clean-soft);border:1px solid #cfe0d2;border-radius:var(--r-sm);padding:14px 16px;margin:0}
+.restored-chip{display:inline-flex;align-items:center;gap:6px;background:var(--keep-soft);color:var(--keep);border:1px solid #c5dde5;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:650}
+
+/* ==========================================================================
+   PREMIUM PASS
+   Guidance moves into popovers; the page keeps only views, inputs and
+   actions. Everything below either refines the existing look or supports
+   the popover system, and overrides earlier rules on purpose.
+   ========================================================================== */
+
+:root{
+  --paper:#fcfbf9; --card:#fff; --sunk:#f6f4f0; --rule:#eae6df; --rule-s:#dcd6cc;
+  --ink:#17150f; --ink-soft:#615a50; --ink-faint:#9a9288;
+  --shadow:0 1px 1px rgba(23,21,15,.03),0 6px 18px rgba(23,21,15,.045);
+  --shadow-lift:0 2px 4px rgba(23,21,15,.05),0 16px 40px rgba(23,21,15,.09);
+  --r:14px; --r-sm:10px;
+}
+
+body{font-size:15.5px;letter-spacing:-.003em}
+.shell{padding:0 32px}
+
+/* slimmer chrome */
+.mock{padding:7px 0;font-size:12px;background:#17150f}
+.top-in{height:62px}
+.rail-in{gap:0}
+.rl{padding:11px 9px 10px}
+
+/* ---- hide the long-form copy; it lives in popovers now ---- */
+.prm-how,.prm-scale{display:none}
+.dn{display:none}
+.lede{display:none}
+.sect-n{display:none}
+.nbbanner{display:none}
+
+/* ---- headings: quieter, more deliberate ---- */
+h1{font-size:25px;font-weight:600;letter-spacing:-.025em;margin:0}
+.head{margin-bottom:26px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sect-t{font-size:10.5px;letter-spacing:.13em;color:var(--ink-faint);font-weight:700;margin:34px 0 14px}
+
+/* ---- info affordance ---- */
+.info{
+  width:18px;height:18px;flex:0 0 auto;border-radius:50%;border:1px solid var(--rule-s);
+  background:var(--card);color:var(--ink-faint);font:600 11px/1 var(--sans);
+  cursor:pointer;display:inline-grid;place-items:center;padding:0;
+  transition:border-color .14s,color .14s,background .14s;vertical-align:1px
+}
+.info:hover{border-color:var(--ink-soft);color:var(--ink);background:var(--sunk)}
+.info.lg{width:22px;height:22px;font-size:12px}
+.info[aria-expanded=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+/* ---- popover ---- */
+.pop-shade{position:fixed;inset:0;z-index:70;background:rgba(23,21,15,.26);backdrop-filter:blur(2px);opacity:0;transition:opacity .16s}
+.pop-shade.on{opacity:1}
+.pop{
+  position:fixed;z-index:71;width:min(430px,calc(100vw - 32px));max-height:72vh;overflow-y:auto;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+  box-shadow:var(--shadow-lift);padding:20px 22px 22px;
+  opacity:0;transform:translateY(5px) scale(.985);transition:opacity .16s,transform .16s
+}
+.pop.on{opacity:1;transform:none}
+.pop-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+.pop-t{font-size:14px;font-weight:650;letter-spacing:-.01em;line-height:1.35}
+.pop-sub{font:10.5px var(--mono);color:var(--ink-faint);margin-top:3px}
+.pop-x{width:26px;height:26px;flex:0 0 auto;border-radius:50%;border:1px solid var(--rule);background:var(--card);color:var(--ink-faint);cursor:pointer;font-size:15px;line-height:1;display:grid;place-items:center}
+.pop-x:hover{background:var(--sunk);color:var(--ink)}
+.pop-body{font-size:13px;line-height:1.62;color:var(--ink-soft)}
+.pop-body p{margin:0 0 10px}
+.pop-body p:last-child{margin:0}
+.pop-body b{color:var(--ink);font-weight:620}
+.pop-body code,.pop-body .ex{font:11.5px var(--mono);background:var(--sunk);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;color:var(--ink)}
+.pop-body .f{display:inline-block;background:var(--ink);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:99px;margin-right:7px;vertical-align:1px}
+.pop-range{display:flex;justify-content:space-between;gap:12px;font:10.5px var(--mono);color:var(--ink-faint);background:var(--sunk);border-radius:7px;padding:8px 11px;margin-bottom:12px}
+.pop-body ul{margin:8px 0 0;padding-left:18px}
+.pop-body .dn,.pop-body .nbbanner{background:var(--sunk);border:1px solid var(--rule);border-left:2px solid var(--ink-faint);border-radius:8px;padding:12px 14px}
+.pop-body .dn h4{margin:0 0 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.pop-body .dn p,.pop-body .nbbanner p{color:var(--ink-soft);font-size:12.5px;margin:0 0 7px}
+.pop-body .dn p:last-child,.pop-body .nbbanner p:last-child{margin:0}
+.pop-body .nbbanner{display:flex;gap:11px;align-items:flex-start;border-left-color:var(--nb)}
+.pop-body .nbbanner .lab{background:var(--nb);color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px;flex:0 0 auto}
+.pop-body li{margin-bottom:5px}
+
+/* ---- parameter rows: input-led ---- */
+.params{border-radius:var(--r);border-color:var(--rule)}
+.params-h{padding:13px 22px;background:var(--card);border-bottom:1px solid var(--rule)}
+.params-h h3{font-size:10.5px;letter-spacing:.13em}
+.params-b{padding:4px 22px 14px}
+.prm{padding:14px 0;border-bottom:1px solid var(--rule)}
+.prm:last-child{border-bottom:0}
+.prm-top{grid-template-columns:1fr 196px;gap:22px;align-items:center}
+@media(max-width:700px){.prm-top{grid-template-columns:1fr}}
+.prm-name{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:-.005em}
+.prm-code{display:none}
+.prm-val{font:600 12.5px var(--mono);color:var(--ink);min-width:50px}
+.prm-hits{font-size:11px;font-weight:600;color:var(--ink-faint);margin-top:6px;letter-spacing:-.002em}
+.prm-hits.none{color:var(--ink-faint)}
+.prm-toggle{gap:10px}
+.prm-toggle input{width:16px;height:16px}
+input[type=range]{height:3px;border-radius:99px}
+
+/* ---- cards: lighter, calmer ---- */
+.card{border-radius:var(--r-sm);box-shadow:none;border-color:var(--rule);transition:border-color .14s,box-shadow .14s}
+.card:hover{box-shadow:var(--shadow)}
+.cm{padding:10px 12px 12px}
+.st{font-size:11.5px;font-weight:600}
+.fn{font-size:10px}
+.why2{background:rgba(23,21,15,.72);font-size:9px;backdrop-filter:blur(3px)}
+.grid{gap:14px}
+.keepbtn{font-size:11.5px;padding:6px 10px;border-radius:99px}
+
+/* ---- tally: the hero number of each step ---- */
+.tally{border-radius:var(--r);padding:20px 24px;box-shadow:none;border-color:var(--rule);gap:22px}
+.tally .n{font-size:32px;font-weight:650;letter-spacing:-.03em}
+.tally .l{font-size:9.5px;letter-spacing:.11em}
+.tally .why{font-size:12.5px;border-left:1px solid var(--rule);padding-left:22px;color:var(--ink-soft)}
+.fbar{height:6px}
+
+/* ---- buttons ---- */
+.btn{border-radius:99px;font-weight:600;letter-spacing:-.005em;transition:background .14s,border-color .14s,transform .12s}
+.btn-big{padding:12px 24px;font-size:14.5px}
+.btn-p{background:var(--ink);border-color:var(--ink)}
+.btn-p:hover{background:#2a2720;border-color:#2a2720}
+.nav{margin-top:34px;padding-top:20px}
+
+/* ---- pile ---- */
+.pile{border-radius:var(--r);box-shadow:none}
+.pile-h{background:var(--card);padding:13px 20px}
+.pile-h:hover{background:var(--sunk)}
+.pile-h .ttl{font-size:12.5px;font-weight:620}
+.pile-note{display:none}
+.pile-gh{font-size:10px;letter-spacing:.11em}
+
+/* ---- destination ---- */
+.radio-row{border-radius:var(--r-sm);padding:11px 13px}
+.radio-row .rx{display:none}
+.radio-row .rl2{font-size:12.5px}
+.radio-row.on{background:var(--sunk);border-color:var(--ink)}
+.txtin{border-radius:9px;font-size:13.5px}
+.pathbox{background:#17150f;border-radius:var(--r-sm);font-size:11.5px}
+.chk-row .cx{display:none}
+.chk-row{font-size:12.5px}
+.sugg button{font-size:11px}
+.sugg button.on{background:var(--ink);border-color:var(--ink)}
+
+/* ---- bands ---- */
+.bandrow{border-radius:var(--r-sm);padding:10px 13px}
+.bandname{font-size:12.5px}
+.bandcard{border-radius:var(--r);box-shadow:none}
+.quota-sum{font-size:12px;border-radius:9px;font-weight:600}
+
+footer{border-top:1px solid var(--rule);margin-top:40px;padding:24px 24px 52px}
+footer p{font-size:12px;color:var(--ink-faint)}
+footer p{margin:0 0 7px;font-size:13px;color:var(--ink-soft);max-width:80ch}
+</style>
+</head>
+<body>
+
+<div class="mock"><div class="shell">
+  <span><span class="t">MOCKUP v4</span> &nbsp;11 steps. Every removal step exposes its real parameters, with guidance on choosing them.</span>
+  <span><b>mockups/funnel_v4.html</b></span>
+</div></div>
+
+<header class="top"><div class="shell top-in">
+  <div class="brand"><span class="mk"></span><span class="bn">Photo Studio</span></div>
+  <div class="live">
+    <span><span class="big" id="liveN">40</span> <span style="color:var(--ink-faint)">still in</span></span>
+    <span class="restored-chip">&#128204; <span id="manualN">0</span> manually selected</span>
+  </div>
+</div></header>
+
+<nav class="rail"><div class="shell"><div class="rail-in" id="rail"></div></div></nav>
+
+<main class="shell">
+
+<!-- ============ 1 ADD ============ -->
+<section class="panel" data-s="1">
+  <div class="head"><h1>1 &middot; Add the shoot</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Each step takes photos <em>out</em>, and nothing is ever deleted from your drive. Every rejected frame stays in a pile you can reach from any later step and put back.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">&mdash;</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">40</div><div class="l">after</div></div>
+    <div class="why">40 photos, 286 MB from <span class="mono">2_Muhurtham</span>. Nothing removed yet.</div>
+  </div>
+
+  <div class="grid">
+    <article class="card"><div class="ph rot land"><s>7Y4A3139</s></div><div class="cm"><div class="fn">7Y4A3139.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3146</s></div><div class="cm"><div class="fn">7Y4A3146.JPG</div><div class="st">upright</div></div></article>
+    <article class="card"><div class="ph rot land"><s>7Y4A3156</s></div><div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3162</s></div><div class="cm"><div class="fn">7Y4A3162.JPG</div><div class="st">upright</div></div></article>
+    <article class="card"><div class="ph rot land"><s>7Y4A3168</s></div><div class="cm"><div class="fn">7Y4A3168.JPG</div><div class="st">sideways</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3195</s></div><div class="cm"><div class="fn">7Y4A3195.JPG</div><div class="st">upright</div></div></article>
+  </div>
+
+  <div class="dn keepn"><h4>Three things that apply to every step</h4>
+    <p><span class="f">PICK ANY</span>Every photo carries a <strong>&#128204;</strong> button, and every step carries the <strong>rejected pile</strong> &mdash; everything removed so far, grouped by the step that removed it, with the reason. You can claim any frame at any point, before or after it was rejected.</p>
+    <p><span class="f">NO INTERFERENCE</span>Your picks go into a <strong>separate set</strong>. They do not rejoin the funnel, do not change the ranking, and cannot alter which frames become selects. The engine's run is left exactly as it was and delivered alongside yours, in <span class="mono">Manually_Selected/</span>. The counter in the header is deliberately separate from the "still in" count for the same reason.</p>
+    <p><span class="f">PARAMS</span>Every removal step exposes the actual thresholds the engine uses, with a note under each on how to choose it. Defaults are the values in the code today. Nothing is hidden behind "smart".</p></div>
+
+  <div class="nav"><span></span><button class="btn btn-p btn-big" data-go="2">Next: fix sideways photos &rarr;</button></div>
+</section>
+
+<!-- ============ 2 STRAIGHTEN ============ -->
+<section class="panel" data-s="2" hidden>
+  <div class="head"><h1>2 &middot; Fix sideways photos</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Rotates frames so heads sit at the top. Removes nothing.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">40</div><div class="l">after</div></div>
+    <div class="why"><strong>15 rotated, none removed.</strong> Quarter turns only &mdash; nothing cropped, stretched or resampled.</div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; orientation</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p1">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Confidence margin before rotating</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">vertical.UPRIGHT_MARGIN &nbsp;default 0.06</div></div>
+          <div class="prm-ctl"><input type="range" min="0" max="0.30" step="0.01" value="0.06" data-p="margin"><span class="prm-val" id="v-margin">0.06</span></div>
+        </div>
+        <div class="prm-scale"><span>0.00 rotate on any gain</span><span>0.30 only when certain</span></div>
+        <p class="prm-how"><b>How to choose:</b> the app tries all four quarter turns and keeps the one where the face detector is most confident. This is how much <em>better</em> the winner must score before the photo is actually turned. Too low and detector noise spins correctly-oriented frames; too high and genuinely sideways ones stay sideways.
+          <br>Leave at <span class="ex">0.06</span> unless you see mistakes. If upright photos get rotated, raise it. If sideways ones are missed, lower it to <span class="ex">0.03</span> and check the results by eye.</p>
+        <div class="prm-hits" id="h-margin">15 of 40 rotated at this setting</div>
+      </div>
+
+      <div class="prm" data-prm="p2">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Re-encode quality</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">vertical.STRAIGHTEN_QUALITY &nbsp;default 97</div></div>
+          <div class="prm-ctl"><input type="range" min="80" max="100" step="1" value="97" data-p="q"><span class="prm-val" id="v-q">97</span></div>
+        </div>
+        <div class="prm-scale"><span>80 smaller files</span><span>100 no visible loss</span></div>
+        <p class="prm-how"><b>How to choose:</b> rotating moves pixels without changing them, but saving the JPEG again costs one generation of loss. <span class="ex">97</span> makes that invisible. Below about <span class="ex">90</span> you may see artefacts around jewellery and embroidery. Only frames that actually rotate are rewritten &mdash; the other 25 are untouched on disk.</p>
+      </div>
+
+      <div class="prm" data-prm="p3">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Rotate frames with no face found</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">no constant &mdash; currently always off</div></div>
+          <div class="prm-ctl"><label class="prm-toggle"><input type="checkbox" disabled><span style="font-size:12.5px;color:var(--ink-faint)">off</span></label></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> leave this off. Orientation is judged from faces, so a frame with none &mdash; the rings, the venue, a table setting &mdash; has nothing to judge by. Guessing from image statistics would eventually turn a sunset upside down. These frames keep whatever orientation they were stored with, and you can fix them by hand.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">The 15 that were turned</h2>
+  <p class="sect-n">Check these. Rotation is inferred, so it can be wrong.</p>
+
+  <div class="grid">
+    <article class="card"><div class="ph port"><s>7Y4A3156</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3168</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3168.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3218</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3218.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+    <article class="card"><div class="ph port"><s>7Y4A3283</s><span class="tab">270&deg;</span></div>
+      <div class="cm"><div class="fn">7Y4A3283.JPG</div><div class="st clean">6000&times;4000 &rarr; 4000&times;6000</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Rotate manually</button></div></article>
+  </div>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">BUILT &amp; TESTED</span>Shipped in v0.03. Only the screen, the parameters and the manual override are new.</p>
+    <p>There is no EXIF to read: all 40 files report <code>orientation: 1</code>, including the sideways ones.</p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="1">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="3">Next: remove duplicates &rarr;</button></div>
+</section>
+
+<!-- ============ 3 DUPLICATES ============ -->
+<section class="panel" data-s="3" hidden>
+  <div class="head"><h1>3 &middot; Remove duplicates</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Frames that are nearly the same photograph. Only one of each needs to survive.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="d-cut">0</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="d-out">40</div><div class="l">after</div></div>
+    <div class="why"><strong>None found in this batch.</strong> The step still appears so you know it ran.</div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; duplicates</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p4">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">How alike counts as a duplicate</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">config.DUPLICATE_HASH_THRESHOLD &nbsp;default 60</div></div>
+          <div class="prm-ctl"><input type="range" min="5" max="140" step="1" value="60" data-p="dup"><span class="prm-val" id="v-dup">60</span></div>
+        </div>
+        <div class="prm-scale"><span>5 only identical files</span><span>140 merges different poses</span></div>
+        <p class="prm-how"><b>How to choose:</b> this is a Hamming distance on a <b>256-bit</b> perceptual hash &mdash; how many of those 256 bits differ between two frames. <span class="ex">0</span> means pixel-identical; <span class="ex">256</span> means nothing in common.
+          <br><b>Important:</b> most advice online quotes a threshold of about 12, but that is for a <b>64-bit</b> hash. This app uses 256 bits, so those numbers are four times too small here.
+          <br>Use <span class="ex">20&ndash;40</span> to catch only true re-shoots of the same frame. <span class="ex">60</span> is the default and catches a burst where someone barely moved. Above <span class="ex">100</span> you start merging genuinely different poses and will lose photographs you wanted.</p>
+        <div class="prm-hits none" id="h-dup">0 pairs found at 60</div>
+      </div>
+
+      <div class="prm" data-prm="p5">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Which frame of a pair to keep</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">no constant &mdash; proposed, never forced</div></div>
+          <div class="prm-ctl">
+            <select style="font:inherit;font-size:12.5px;padding:7px 10px;border-radius:7px;border:1px solid var(--rule-s);background:var(--card);width:100%">
+              <option>Highest score</option>
+              <option selected>Sharper on the face</option>
+              <option>Ask me every time</option>
+            </select>
+          </div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> <span class="ex">Sharper on the face</span> is the better default for people photography. Score alone gets this wrong often enough to matter &mdash; in the worked example below, the higher-scoring frame is the one worth discarding, because it is grainier while its partner is sharper where it counts. Pick <span class="ex">Ask me every time</span> if the batch is small and precious.</p>
+      </div>
+
+      <div class="prm" data-prm="p6">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Hash resolution</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">config.PHASH_SIZE &nbsp;default 16 &rarr; 256 bits</div></div>
+          <div class="prm-ctl"><span style="font-size:12.5px;color:var(--ink-faint)">fixed &mdash; changing it invalidates every threshold</span></div>
+        </div>
+        <p class="prm-how"><b>Why you cannot change this here:</b> the hash size sets the scale of every distance in this step. Halving it to 8 would make 256-bit thresholds meaningless and silently change what counts as a duplicate everywhere. It is exposed read-only on purpose.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="empty" id="dup-empty">
+    <p class="big">Nothing to remove here</p>
+    <p>No two frames in these 40 are alike enough at a distance of 60. This sample was taken every sixth photo across the shoot, so near-identical bursts were skipped. A continuous run would show plenty.</p>
+  </div>
+
+  <h2 class="sect-t">What it looks like when pairs are found</h2>
+  <div class="grid grid-w">
+    <article class="card"><div class="ph land"><s>7Y4A3404</s><span class="tab">71.2</span><span class="why2">distance 12 / 256 &middot; keeping: sharper face</span></div>
+      <div class="cm"><div class="fn">7Y4A3404.JPG</div><div class="st clean">Keeping</div></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3410</s><span class="tab">71.8</span><span class="why2">distance 12 / 256 &middot; grainier of the pair</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3410.JPG</div><div class="st major">Near-duplicate</div>
+      <button class="keepbtn" data-keep="d3410">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="dn"><h4>Why duplicates can run before the quality analysis</h4>
+    <p><span class="f">MEASURED</span>Duplicate detection needs the photo decoded. Decoding 40 photos takes <code>2.67s</code>; decoding <em>and</em> measuring every metric takes <code>3.01s</code> &mdash; the extra metrics cost 11% because the decode dominates. So there is no cheap duplicates-only pass worth building. The app scans once here, caches, and <strong>every later step is instant, including stepping backwards.</strong></p></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="2">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="4">Next: exposure &rarr;</button></div>
+</section>
+
+<!-- ============ 4 EXPOSURE ============ -->
+<section class="panel" data-s="4" hidden>
+  <div class="head"><h1>4 &middot; Exposure problems</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Light that cannot be fixed afterwards. Clipped white has no detail left to recover.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">40</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="x-cut">4</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="x-out">36</div><div class="l">after</div></div>
+    <div class="why">12 frames have some exposure fault; 4 are bad enough to remove by default.
+      <div class="fbar"><span class="keepb" id="x-bk" style="width:90%"></span><span class="dropb" id="x-bd" style="width:10%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; exposure</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p7">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-x="blown" data-n="3"><span class="prm-name">Remove blown highlights</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.BLOWN_MAJOR &nbsp;default 0.10</div></div>
+          <div class="prm-ctl"><input type="range" min="0.01" max="0.40" step="0.01" value="0.10" data-p="blown"><span class="prm-val" id="v-blown">10%</span></div>
+        </div>
+        <div class="prm-scale"><span>1% very strict</span><span>40% only the worst</span></div>
+        <p class="prm-how"><b>How to choose:</b> the fraction of the frame that is pure white (value 250 or above). That detail is gone permanently &mdash; no editing brings it back.
+          <br>A little clipping is normal and often fine: a window, a bright sky, sun on a white saree. <span class="ex">10%</span> means a tenth of the frame is dead white, which usually means the shot is lost. Set <span class="ex">4&ndash;6%</span> if you are strict about highlights; <span class="ex">20%</span> if your venue was very bright and you would rather judge by eye.</p>
+        <div class="prm-hits" id="h-blown">3 photos at 10%</div>
+      </div>
+
+      <div class="prm" data-prm="p8">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-x="bright" data-n="1"><span class="prm-name">Remove washed out</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.BRIGHT_BRIGHTNESS &nbsp;default 202</div></div>
+          <div class="prm-ctl"><input type="range" min="150" max="250" step="1" value="202" data-p="bright"><span class="prm-val" id="v-bright">202</span></div>
+        </div>
+        <div class="prm-scale"><span>150 catches more</span><span>250 almost nothing</span></div>
+        <p class="prm-how"><b>How to choose:</b> average brightness of the whole frame, on a 0&ndash;255 scale. Above this it reads as washed out overall &mdash; not just hot highlights, but the entire photograph too bright.
+          <br><span class="ex">202</span> is high on purpose, so only genuinely overexposed frames trip it. A bright outdoor ceremony can legitimately average 180&ndash;190. Lower it to <span class="ex">190</span> only if you see washed-out frames surviving.</p>
+        <div class="prm-hits" id="h-bright">1 photo at 202</div>
+      </div>
+
+      <div class="prm" data-prm="p9">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-x="dark" data-n="0"><span class="prm-name">Remove low light</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.DARK_BRIGHTNESS &nbsp;default 62</div></div>
+          <div class="prm-ctl"><input type="range" min="20" max="110" step="1" value="62" data-p="dark"><span class="prm-val" id="v-dark">62</span></div>
+        </div>
+        <div class="prm-scale"><span>20 only near-black</span><span>110 catches moody shots</span></div>
+        <p class="prm-how"><b>How to choose:</b> the mirror of the control above &mdash; average brightness <em>below</em> this reads as too dark. Unlike blown highlights, dark frames can often be lifted in editing, so this is more forgiving by nature.
+          <br>Be careful raising it: a deliberately moody candle-lit or night shot may average 70&ndash;90 and is not a fault. <span class="ex">62</span> catches genuinely underexposed frames. Nothing in this batch trips it.</p>
+        <div class="prm-hits none" id="h-dark">0 photos at 62</div>
+      </div>
+
+      <div class="prm" data-prm="p10">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-x="shadow" data-n="0"><span class="prm-name">Remove lost shadow detail</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.CRUSHED_MAJOR &nbsp;default 0.18</div></div>
+          <div class="prm-ctl"><input type="range" min="0.02" max="0.50" step="0.01" value="0.18" data-p="shadow"><span class="prm-val" id="v-shadow">18%</span></div>
+        </div>
+        <div class="prm-scale"><span>2% very strict</span><span>50% only extreme</span></div>
+        <p class="prm-how"><b>How to choose:</b> the fraction of the frame at pure black (value 5 or below). Set higher than the highlight threshold on purpose &mdash; a dark suit, a night background or deep shadow is normal in wedding work, and crushed black is less noticeable than clipped white.
+          <br><span class="ex">18%</span> means nearly a fifth of the frame is solid black. Nothing here trips it.</p>
+        <div class="prm-hits none" id="h-shadow">0 photos at 18%</div>
+      </div>
+
+      <div class="prm offp" data-prm="p11">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-x="hot" data-n="9"><span class="prm-name">Remove bright highlights (minor)</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.BLOWN_MINOR &nbsp;default 0.04</div></div>
+          <div class="prm-ctl"><input type="range" min="0.01" max="0.20" step="0.01" value="0.04" data-p="hot" disabled><span class="prm-val" id="v-hot">4%</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> off by default, and it should usually stay off. This flags frames with some clipping but not enough to ruin them &mdash; <b>9 of your 40</b>. Turning it on would remove nearly a quarter of the batch for a fault most clients would never notice. Use it only when you have far more photographs than you need.</p>
+        <div class="prm-hits" id="h-hot">would remove 9 more</div>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">Being removed &mdash; keep any you disagree with</h2>
+  <div class="grid" id="x-grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3269</s><span class="tab">35.6</span><span class="why2">31% of frame pure white</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3269.JPG</div><div class="st major">Highlights blown out</div>
+      <div class="alsofail">also fails: focus</div>
+      <button class="keepbtn" data-keep="x3269">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3296</s><span class="tab">35.1</span><span class="why2">18% of frame pure white</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3296.JPG</div><div class="st major">Highlights blown out</div>
+      <button class="keepbtn" data-keep="x3296">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3302</s><span class="tab">34.3</span><span class="why2">14% of frame pure white</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3302.JPG</div><div class="st major">Highlights blown out</div>
+      <button class="keepbtn" data-keep="x3302">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph port"><s>7Y4A3248</s><span class="tab">19.2</span><span class="why2">average brightness 247 / 255</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3248.JPG</div><div class="st major">Washed out</div>
+      <div class="alsofail">also fails: focus, subject</div>
+      <button class="keepbtn" data-keep="x3248">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="dn warn"><h4>Overlapping faults</h4>
+    <p>Two of these four also fail later steps. A photo is <strong>attributed to the first step that catches it</strong>, so the focus step will report 7 removals rather than its 9 out-of-focus frames &mdash; two were already gone here.</p>
+    <p>Reordering the steps changes these per-step counts but <strong>not the final set</strong>. The "also fails" line on each card tells you when a frame was doomed anyway.</p></div>
+
+  <div class="pile-slot" data-for="4"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="3">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="5">Next: focus &rarr;</button></div>
+</section>
+
+<!-- ============ 5 FOCUS ============ -->
+<section class="panel" data-s="5" hidden>
+  <div class="head"><h1>5 &middot; Focus problems</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Softness that cannot be sharpened back. Judged against the rest of your batch, not an absolute number.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">36</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="f-cut">7</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="f-out">29</div><div class="l">after</div></div>
+    <div class="why">9 frames are out of focus, but 2 were already removed at the exposure step.
+      <div class="fbar"><span class="keepb" id="f-bk" style="width:81%"></span><span class="dropb" id="f-bd" style="width:19%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; focus</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p12">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-f="soft" data-n="9"><span class="prm-name">Remove out of focus</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.SOFT_PERCENTILE &nbsp;default 22</div></div>
+          <div class="prm-ctl"><input type="range" min="0" max="50" step="1" value="22" data-p="soft"><span class="prm-val" id="v-soft">22%</span></div>
+        </div>
+        <div class="prm-scale"><span>0 remove none</span><span>50 remove half the batch</span></div>
+        <p class="prm-how"><b>How to choose:</b> this is a <b>percentile, not a sharpness value</b>. At <span class="ex">22</span> the softest 22% of <em>this batch</em> is called out of focus.
+          <br>Why relative and not absolute: Laplacian variance has no universal "sharp" number &mdash; it depends on the subject, the lens and the resolution. A macro of a ring and a wide hall shot measure completely differently while both being perfectly sharp.
+          <br><b>The consequence to understand:</b> this always removes roughly that percentage, even if every frame is sharp. On a flawless batch it still cuts the softest fifth. Set it to <span class="ex">0</span> to disable, or lower to <span class="ex">10</span> if your focus hit rate is good.</p>
+        <div class="prm-hits" id="h-soft">9 photos at the 22nd percentile</div>
+      </div>
+
+      <div class="prm offp" data-prm="p13">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-f="slight" data-n="8"><span class="prm-name">Remove slightly soft (minor)</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.SLIGHTLY_SOFT_PERCENTILE &nbsp;default 42</div></div>
+          <div class="prm-ctl"><input type="range" min="22" max="70" step="1" value="42" data-p="slight" disabled><span class="prm-val" id="v-slight">42%</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> off by default. Everything between the 22nd and 42nd percentile is flagged "slightly soft" &mdash; <b>8 of your 40</b> &mdash; which is information, not a verdict. A slightly soft candid can still be the best photograph of the moment. Leave it off and let the score cut at step 9 handle these.</p>
+        <div class="prm-hits" id="h-slight">would remove 8 more</div>
+      </div>
+
+      <div class="prm" data-prm="p14">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Sharpness measurement scales</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">vertical/metrics.SHARPNESS_SCALES &nbsp;1.0, 0.5, 0.25, 0.125</div></div>
+          <div class="prm-ctl"><span style="font-size:12.5px;color:var(--ink-faint)">fixed &mdash; do not change</span></div>
+        </div>
+        <p class="prm-how"><b>Why this exists and why it is locked:</b> sharpness is measured at four image sizes and the <em>lowest</em> result is used, so a frame must look sharp at every scale.
+          <br>This is the fix for a real defect. Grain is high-frequency detail, so plain Laplacian variance read grainy frames as <b>12&times; sharper</b> than they were, and they took every top slot while being described as "crisp detail". Downsampling averages grain away but leaves real detail, which cut the inflation to <b>1.4&times;</b>. Removing a scale brings the bug back.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">Being removed</h2>
+  <div class="grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3355</s><span class="tab">55.4</span><span class="why2">softest 22% of batch</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3355.JPG</div><div class="st major">Out of focus</div>
+      <button class="keepbtn" data-keep="f3355">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3139</s><span class="tab">39.4</span><span class="why2">softest 22% of batch</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3139.JPG</div><div class="st major">Out of focus</div>
+      <button class="keepbtn" data-keep="f3139">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3237</s><span class="tab">44.5</span><span class="why2">softest 22% of batch</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3237.JPG</div><div class="st major">Out of focus</div>
+      <button class="keepbtn" data-keep="f3237">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3306</s><span class="tab">45.7</span><span class="why2">softest 22% of batch</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3306.JPG</div><div class="st major">Out of focus</div>
+      <button class="keepbtn" data-keep="f3306">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="pile-slot" data-for="5"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="4">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="6">Next: subject and faces &rarr;</button></div>
+</section>
+
+<!-- ============ 6 SUBJECT ============ -->
+<section class="panel" data-s="6" hidden>
+  <div class="head"><h1>6 &middot; Subject and faces</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">The frame can be well lit and sharp and still fail the people in it.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">29</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="s-cut">5</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="s-out">24</div><div class="l">after</div></div>
+    <div class="why">21 frames have a face fault; 9 are major, 4 of those already removed earlier.
+      <div class="fbar"><span class="keepb" id="s-bk" style="width:83%"></span><span class="dropb" id="s-bd" style="width:17%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; subject and faces</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p15">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-sb="fsoft" data-n="8"><span class="prm-name">Remove face not in focus</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.FACE_SOFT_RATIO 0.35 &amp; FACE_SOFT_PERCENTILE 25</div></div>
+          <div class="prm-ctl"><input type="range" min="0.05" max="1.00" step="0.05" value="0.35" data-p="fsoft"><span class="prm-val" id="v-fsoft">0.35</span></div>
+        </div>
+        <div class="prm-scale"><span>0.05 only extreme</span><span>1.00 face must beat frame</span></div>
+        <p class="prm-how"><b>How to choose:</b> the face must be softer than <em>this fraction</em> of its own frame's sharpness <b>and</b> fall in the softest 25% of faces in the batch. Both have to agree before the fault is reported.
+          <br><b>Why both:</b> the frame ratio alone misfires &mdash; on your photos the face-to-frame ratio runs 0.01 to 6.74 with a <b>median near 1.3</b>, so faces are usually <em>sharper</em> than their frames. The percentile alone is just as bad: it always condemns the softest quarter even when every face is sharp.
+          <br><span class="ex">0.35</span> sits in a clean gap in your data &mdash; the 9 flagged frames have faces at 1&ndash;27% of frame sharpness, with the next value at 45%. Raising it towards <span class="ex">0.6</span> starts catching sharp faces.</p>
+        <div class="prm-hits" id="h-fsoft">8 photos at 0.35</div>
+      </div>
+
+      <div class="prm" data-prm="p16">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-sb="fdark" data-n="1"><span class="prm-name">Remove face in shadow</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.FACE_DARK_RATIO 0.68 &amp; FACE_DARK_ABSOLUTE 95</div></div>
+          <div class="prm-ctl"><input type="range" min="0.30" max="1.00" step="0.02" value="0.68" data-p="fdark"><span class="prm-val" id="v-fdark">0.68</span></div>
+        </div>
+        <div class="prm-scale"><span>0.30 only severe backlight</span><span>1.00 any dimming</span></div>
+        <p class="prm-how"><b>How to choose:</b> catches backlighting &mdash; the classic bright window behind the couple leaving their faces dark. The face must be dimmer than this fraction of the frame's brightness <b>and</b> below 95 of 255 absolutely.
+          <br><b>Why this matters more than it looks:</b> a whole-frame exposure reading misses backlighting completely, because the average looks fine. Only comparing the face against its surroundings finds it.
+          <br><span class="ex">0.68</span> means the face is at roughly two-thirds the frame's brightness. Lower it to <span class="ex">0.5</span> to catch only severe cases.</p>
+        <div class="prm-hits" id="h-fdark">1 photo at 0.68</div>
+      </div>
+
+      <div class="prm offp" data-prm="p17">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-sb="noface" data-n="1"><span class="prm-name">Remove frames with nobody in them</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose "no_face" &mdash; minor by design</div></div>
+          <div class="prm-ctl"><span style="font-size:12.5px;color:var(--ink-faint)">off by default</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> leave this off for a wedding. A set is full of photographs with no people in them &mdash; the rings, the cake, the mandap, table settings &mdash; and they are not faults. This is marked minor in the engine for exactly that reason. Turn it on only when you specifically want portraits.</p>
+        <div class="prm-hits" id="h-noface">would remove 1</div>
+      </div>
+
+      <div class="prm offp" data-prm="p18">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-sb="turned" data-n="18"><span class="prm-name">Remove head turned away (minor)</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.FACE_TURNED &nbsp;default 0.45</div></div>
+          <div class="prm-ctl"><input type="range" min="0.10" max="0.90" step="0.05" value="0.45" data-p="turned" disabled><span class="prm-val" id="v-turned">0.45</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> off, and for candid work it should stay off. This fires on <b>18 of your 40</b> &mdash; nearly half. Someone looking away <em>is</em> candid photography, not a defect.
+          <br><b>Known limitation:</b> the measure saturates. Eight of your frames read exactly 0.00, which is the clamp bottoming out rather than eight identical faces, so a 40&deg; turn and a full profile are indistinguishable. Treat the number as a rough hint only.</p>
+        <div class="prm-hits" id="h-turned">would remove 18 &mdash; nearly half the batch</div>
+      </div>
+
+      <div class="prm" data-prm="p19">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Smallest face worth counting</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">config.FACE_MIN_SIZE_RATIO 0.02 &middot; PROMINENT 0.08</div></div>
+          <div class="prm-ctl"><input type="range" min="0.01" max="0.20" step="0.01" value="0.02" data-p="fmin"><span class="prm-val" id="v-fmin">2%</span></div>
+        </div>
+        <div class="prm-scale"><span>1% counts bystanders</span><span>20% only close portraits</span></div>
+        <p class="prm-how"><b>How to choose:</b> a face smaller than this fraction of the frame's longest edge is ignored entirely &mdash; it is a guest in the background, not a subject. Above the second value, 8%, a face counts as <em>prominent</em>.
+          <br>Raise to <span class="ex">5%</span> for a crowded venue where background guests are confusing the subject detection. Lower only if you want group shots judged on everyone present.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">Being removed</h2>
+  <div class="grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3320</s><span class="tab">53.1</span><span class="why2">face 61 vs frame 142 brightness</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3320.JPG</div><div class="st major">Face in shadow</div>
+      <button class="keepbtn" data-keep="s3320">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3313</s><span class="tab">53.8</span><span class="why2">face at 9% of frame sharpness</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3313.JPG</div><div class="st major">Face not in focus</div>
+      <button class="keepbtn" data-keep="s3313">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3364</s><span class="tab">60.4</span><span class="why2">face at 13% of frame sharpness</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3364.JPG</div><div class="st major">Face not in focus</div>
+      <button class="keepbtn" data-keep="s3364">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3417</s><span class="tab">65.7</span><span class="why2">face at 15% of frame sharpness</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3417.JPG</div><div class="st major">Face not in focus</div>
+      <button class="keepbtn" data-keep="s3417">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="pile-slot" data-for="6"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="5">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="7">Next: expressions &rarr;</button></div>
+</section>
+
+<!-- ============ 7 EXPRESSIONS ============ -->
+<section class="panel" data-s="7" hidden>
+  <div class="head"><h1>7 &middot; Expressions</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Remove blinks and flat faces. The frame can be technically perfect and still be the wrong instant.</p></div>
+
+  <div class="nbbanner"><span class="lab">NOT BUILT</span>
+    <p><strong>This step does not exist in the code.</strong> I searched the whole repository: there is no expression, smile, blink or eye-state logic anywhere. The two models on disk are YuNet (face detection, 233 KB) and SFace (identity, 38 MB), and neither can tell a smile from a grimace. Everything on this screen is illustrative. The parameters below are what it <em>would</em> need.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">24</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="e-cut">5</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="e-out">19</div><div class="l">after</div></div>
+    <div class="why">Illustrative counts &mdash; nothing here was measured.
+      <div class="fbar"><span class="keepb" id="e-bk" style="width:79%"></span><span class="dropb" id="e-bd" style="width:21%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; expressions (proposed)</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p20">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-e="eyes" data-n="3"><span class="prm-name">Remove eyes closed</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">needs a 4th model &mdash; see below</div></div>
+          <div class="prm-ctl"><input type="range" min="0.30" max="0.95" step="0.05" value="0.70" data-p="eyes"><span class="prm-val" id="v-eyes">0.70</span></div>
+        </div>
+        <div class="prm-scale"><span>0.30 flags uncertain blinks</span><span>0.95 only obvious</span></div>
+        <p class="prm-how"><b>How to choose:</b> minimum confidence before a frame is called a blink. A blink ruins a photograph unarguably and the judgement is objective, so this is the one expression signal I would actually trust.
+          <br>Start at <span class="ex">0.70</span>. Raise it if frames with people glancing down get removed; lower it if obvious blinks survive. <b>Build this one first</b> &mdash; it is the most useful and the least debatable.</p>
+        <div class="prm-hits" id="h-eyes">3 photos (illustrative)</div>
+      </div>
+
+      <div class="prm" data-prm="p21">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked data-e="flat" data-n="2"><span class="prm-name">Remove flat expression</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">emotion-ferplus class "neutral"</div></div>
+          <div class="prm-ctl"><input type="range" min="0.40" max="0.95" step="0.05" value="0.75" data-p="flat"><span class="prm-val" id="v-flat">0.75</span></div>
+        </div>
+        <div class="prm-scale"><span>0.40 aggressive</span><span>0.95 only certain</span></div>
+        <p class="prm-how"><b>How to choose:</b> how confidently the model must call a face "neutral" before the frame is removed. This is taste, not a defect &mdash; a composed, serious portrait is often the best photograph of the day.
+          <br>Keep it high, <span class="ex">0.75</span> or above, so only unambiguous cases go. Honestly, consider leaving this off entirely and letting the score cut at step 9 do the work.</p>
+        <div class="prm-hits" id="h-flat">2 photos (illustrative)</div>
+      </div>
+
+      <div class="prm offp" data-prm="p22">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-e="nosmile" data-n="4"><span class="prm-name">Remove not smiling</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">emotion-ferplus "happiness" below threshold</div></div>
+          <div class="prm-ctl"><input type="range" min="0.10" max="0.90" step="0.05" value="0.50" data-p="nosmile" disabled><span class="prm-val" id="v-nosmile">0.50</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> off, and I would not turn it on. Requiring a smile discards the quiet moments that often make the best wedding photographs &mdash; the father watching, the bride before she turns. This is exactly what the keep button is for instead.</p>
+        <div class="prm-hits" id="h-nosmile">would remove 4</div>
+      </div>
+
+      <div class="prm" data-prm="p23">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Minimum face size for expression reading</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">proposed &mdash; 64&times;64 px after crop</div></div>
+          <div class="prm-ctl"><input type="range" min="0.03" max="0.30" step="0.01" value="0.08" data-p="emin"><span class="prm-val" id="v-emin">8%</span></div>
+        </div>
+        <div class="prm-scale"><span>3% tries tiny faces</span><span>30% close-ups only</span></div>
+        <p class="prm-how"><b>How to choose:</b> expression models take a 64&times;64 crop. A face occupying 3% of a 6000px frame gives about 180px to work with, which upscales acceptably; a background guest gives 40px and the answer is noise.
+          <br><span class="ex">8%</span> matches the existing "prominent face" threshold, so only real subjects get judged. Faces below it are simply not assessed rather than guessed at.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">What the model would report</h2>
+  <div class="grid">
+    <article class="card"><div class="ph port"><s>7Y4A3156</s><span class="tab">77.5</span><span class="emo">happiness 0.91</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">Smiling, eyes open</div>
+      <button class="keepbtn" data-keep="e3156">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3192</s><span class="tab">58.8</span><span class="emo">eyes closed 0.84</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3192.JPG</div><div class="st nb">Eyes closed</div>
+      <button class="keepbtn" data-keep="e3192">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3204</s><span class="tab">53.2</span><span class="emo">neutral 0.88</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3204.JPG</div><div class="st nb">Flat expression</div>
+      <button class="keepbtn" data-keep="e3204">&#128204; Pick this one</button></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3146</s><span class="tab">68.3</span><span class="emo">surprise 0.63</span></div>
+      <div class="cm"><div class="fn">7Y4A3146.JPG</div><div class="st clean">Reacting, eyes open</div>
+      <button class="keepbtn" data-keep="e3146">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="dn build"><h4>What building this needs &mdash; two models, not one</h4>
+    <p><span class="f">MODEL 3</span><b>Expressions.</b> <code>emotion-ferplus</code> from the ONNX Model Zoo. Takes a <b>64&times;64 grayscale face crop</b>, returns a <b>1&times;8 array</b> of scores across neutral, happiness, surprise, sadness, anger, disgust, fear, contempt. Runs on OpenCV's existing DNN engine &mdash; no new dependency, just another file in <code>models/</code>. Trained on Microsoft's FER+, a relabelling of FER2013 where ten people tagged each image.</p>
+    <p><span class="f">MODEL 4</span><b>Eyes closed is separate.</b> It is not one of the eight classes, so the expression model cannot answer it. YuNet gives five landmarks &mdash; two eye <em>centres</em>, nose tip, two mouth corners &mdash; with no eyelid points, so the usual eye-aspect-ratio trick is impossible. Needs a 68-point landmark model or a dedicated open/closed classifier.</p>
+    <p>About 2&ndash;3 hours each, plus download and verification.</p></div>
+
+  <div class="dn warn"><h4>Two cautions before asking for this</h4>
+    <p><b>Expression is not emotion.</b> The model reads the shape of a face, not what the person felt. A polite smile and genuine delight are identical to it. I would label the output "smiling / neutral / reacting" rather than "happy", because the stronger claim is not supported.</p>
+    <p><b>Accuracy will disappoint.</b> FER2013 images are small, mostly frontal and web-sourced. Yours are 6000&times;4000 with faces at angles in temple lighting, and frontality already reads below 0.45 on 17 of 40 frames. A turned head is precisely where expression models fail.</p></div>
+
+  <div class="pile-slot" data-for="7"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="6">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="8">Next: grain and clarity &rarr;</button></div>
+</section>
+
+<!-- ============ 8 GRAIN ============ -->
+<section class="panel" data-s="8" hidden>
+  <div class="head"><h1>8 &middot; Grain and clarity</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">A review step, not a removal step. Nothing goes by default &mdash; grain has no major fault in the engine.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">19</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="g-cut">0</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="g-out">19</div><div class="l">after</div></div>
+    <div class="why"><strong>13 frames are grainy, 0 removed.</strong> Grain is a compromise, not a defect.
+      <div class="fbar"><span class="keepb" id="g-bk" style="width:100%"></span><span class="dropb" id="g-bd" style="width:0%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; grain and clarity</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm offp" data-prm="p24">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-g="grain" data-n="13"><span class="prm-name">Remove grainy frames</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.GRAINY_PERCENTILE 78 &amp; GRAINY_MARGIN 1.25</div></div>
+          <div class="prm-ctl"><input type="range" min="50" max="99" step="1" value="78" data-p="grain"><span class="prm-val" id="v-grain">78%</span></div>
+        </div>
+        <div class="prm-scale"><span>50 flags half the batch</span><span>99 only the very worst</span></div>
+        <p class="prm-how"><b>How to choose:</b> a frame is called grainy if its noise is above this percentile of the batch <b>and</b> at least 1.25&times; the batch median.
+          <br><b>Why both conditions:</b> a percentile alone misfires badly when a batch has little spread. With most frames at near-identical noise, the cut-off lands on that shared value and flags everything &mdash; it tagged <b>17 of 28</b> on an early test before the margin was added.
+          <br>Grain is usually acceptable in reception and night coverage; it is the price of a usable shutter speed. Leave this off unless you have a surplus of photographs.</p>
+        <div class="prm-hits" id="h-grain">would remove 13 of 19</div>
+      </div>
+
+      <div class="prm offp" data-prm="p25">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" data-g="flatc" data-n="0"><span class="prm-name">Remove flat, low contrast</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">diagnose.FLAT_CONTRAST &nbsp;default 26</div></div>
+          <div class="prm-ctl"><input type="range" min="10" max="60" step="1" value="26" data-p="flatc"><span class="prm-val" id="v-flatc">26</span></div>
+        </div>
+        <div class="prm-scale"><span>10 almost nothing</span><span>60 catches soft light</span></div>
+        <p class="prm-how"><b>How to choose:</b> the standard deviation of brightness across the frame. Low means flat &mdash; haze, a grey sky, heavy fog, or a badly lifted shadow.
+          <br>Contrast is the easiest thing to fix in editing, which is why this is minor and off. <span class="ex">26</span> catches genuinely washed-flat frames. <b>Nothing in your batch trips it.</b></p>
+        <div class="prm-hits none" id="h-flatc">0 photos at 26</div>
+      </div>
+
+      <div class="prm" data-prm="p26">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Noise weight in the overall score</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">shortlist.QUALITY_WEIGHTS["noise"] &nbsp;default 0.25</div></div>
+          <div class="prm-ctl"><input type="range" min="0.05" max="0.45" step="0.01" value="0.25" data-p="nw"><span class="prm-val" id="v-nw">0.25</span></div>
+        </div>
+        <div class="prm-scale"><span>0.05 grain barely counts</span><span>0.45 grain dominates</span></div>
+        <p class="prm-how"><b>How to choose:</b> rather than removing grainy frames outright, this lets grain push them <em>down the ranking</em> so the score cut at step 9 handles them. Usually the better approach.
+          <br><b>Why 0.25 and not the 0.12 the album tool uses:</b> that number only became usable after the sharpness measurement was fixed. While grain inflated sharpness, no weighting worked &mdash; the setting where grain stopped winning was the setting where blurred frames started winning. With both fixes, grainy frames moved from rank 1 to rank 15 of 28.
+          <br>Raising this above about <span class="ex">0.35</span> starts over-punishing legitimate low-light work.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">The 13 grainy frames &mdash; staying, for information</h2>
+  <div class="grid">
+    <article class="card"><div class="ph land"><s>7Y4A3410</s><span class="tab">71.8</span><span class="why2">noise 1.4&times; batch median</span></div>
+      <div class="cm"><div class="fn">7Y4A3410.JPG</div><div class="st minor">Grainy</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3398</s><span class="tab">71.1</span><span class="why2">noise 1.3&times; batch median</span></div>
+      <div class="cm"><div class="fn">7Y4A3398.JPG</div><div class="st minor">Grainy</div></div></article>
+    <article class="card"><div class="ph land"><s>7Y4A3174</s><span class="tab">55.7</span><span class="why2">noise 1.6&times; batch median</span></div>
+      <div class="cm"><div class="fn">7Y4A3174.JPG</div><div class="st minor">Grainy</div></div></article>
+  </div>
+
+  <div class="dn"><h4>Why this is a step at all</h4>
+    <p><span class="f">DECISION</span>It removes nothing by default, which breaks the funnel's pattern. I kept it because grain is the fault photographers argue about most, and because the alternative &mdash; hiding these controls inside the score cut &mdash; makes the 13 affected frames invisible.</p>
+    <p>If you would rather not have a step that usually removes nothing, say so and I will fold these three controls into step 9.</p></div>
+
+  <div class="pile-slot" data-for="8"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="7">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="9">Next: narrow to the strongest &rarr;</button></div>
+</section>
+
+<!-- ============ 9 NARROW ============ -->
+<section class="panel" data-s="9" hidden>
+  <div class="head"><h1>9 &middot; Narrow to the strongest</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">These 19 are all usable. Decide how deep the shortlist goes.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">19</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="w-cut">9</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="w-out">10</div><div class="l">after</div></div>
+    <div class="why">Nothing here is broken &mdash; only weaker than the rest.
+      <div class="fbar"><span class="keepb" id="w-bk" style="width:53%"></span><span class="dropb" id="w-bd" style="width:47%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; narrowing</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p27">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">How many to keep</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">shortlist.run(drop_worst=...)</div></div>
+          <div class="prm-ctl"><input type="range" min="1" max="19" step="1" value="10" data-p="wkeep"><span class="prm-val" id="v-wkeep">10</span></div>
+        </div>
+        <div class="prm-scale"><span>1 only the best</span><span>19 keep everything</span></div>
+        <p class="prm-how"><b>How to choose:</b> kept in score order, best first. This is a count rather than a score threshold on purpose &mdash; scores are relative to the batch, so "keep everything above 60" means something different for every shoot, while "keep 10" is predictable.
+          <br><b>Why a dial and not a rule:</b> the first design removed every frame with any minor fault. On your batch that left <b>8 of 40</b> &mdash; far too harsh, because "head turned away" alone fires on 18. A blanket rule would have discarded nearly half the shoot.
+          <br>Rule of thumb: aim for about <b>3&times;</b> the number of final selects you want, so the next step has real choices to make.</p>
+        <div class="prm-hits" id="h-wkeep">removing the weakest 9 of 19</div>
+      </div>
+
+      <div class="prm" data-prm="p28">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Penalty per major fault</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">shortlist.MAJOR_FAULT_PENALTY &nbsp;default 0.80</div></div>
+          <div class="prm-ctl"><input type="range" min="0.40" max="1.00" step="0.05" value="0.80" data-p="pen"><span class="prm-val" id="v-pen">0.80</span></div>
+        </div>
+        <div class="prm-scale"><span>0.40 brutal</span><span>1.00 no penalty</span></div>
+        <p class="prm-how"><b>How to choose:</b> every major fault multiplies a photo's score by this. Two faults compound &mdash; 0.80 twice is 0.64.
+          <br><b>Why it exists:</b> on the first real-photo run, rank 1 was a frame where the focus had missed the subject's face, while rank 2 was clean and sharp. The five measured metrics say nothing about whether focus landed on a person, so a photograph can measure well and be unusable.
+          <br><span class="ex">0.80</span> costs about a fifth &mdash; enough to drop a flawed frame below a clean one of similar quality, not enough to bury it beneath genuinely worse photographs. Set <span class="ex">1.00</span> to rank on measurements alone.</p>
+      </div>
+
+      <div class="prm" data-prm="p29">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Scoring weights</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">shortlist.QUALITY_WEIGHTS &mdash; must total 1.00</div></div>
+          <div class="prm-ctl"><span style="font-size:12.5px;color:var(--ink-faint)">sharpness .30 &middot; noise .25 &middot; exposure .18 &middot; contrast .15 &middot; colour .12</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> these must sum to 1.00, so raising one lowers the others &mdash; the UI would renormalise as you drag. Sharpness and noise carry over half the score between them because they are the faults that cannot be edited out.
+          <br>Colour at <span class="ex">0.12</span> is deliberately lowest: saturation is a grading choice, not a measure of quality. Raise exposure if your venue lighting was difficult and you want well-lit frames favoured.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">About to be cut &mdash; keep any of them</h2>
+  <div class="grid">
+    <article class="card cut"><div class="ph land"><s>7Y4A3174</s><span class="tab">55.7</span><span class="why2">rank 14 of 19</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3174.JPG</div><div class="st minor">Grainy +2 more</div>
+      <button class="keepbtn" data-keep="w3174">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph port"><s>7Y4A3180</s><span class="tab">53.3</span><span class="why2">rank 16 of 19</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3180.JPG</div><div class="st minor">Head turned away</div>
+      <button class="keepbtn" data-keep="w3180">&#128204; Pick this one</button></div></article>
+    <article class="card cut"><div class="ph land"><s>7Y4A3186</s><span class="tab">53.0</span><span class="why2">rank 17 of 19</span><span class="xmark"><b>remove</b></span></div>
+      <div class="cm"><div class="fn">7Y4A3186.JPG</div><div class="st minor">Faces are small</div>
+      <button class="keepbtn" data-keep="w3186">&#128204; Pick this one</button></div></article>
+  </div>
+
+  <div class="pile-slot" data-for="9"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="8">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="10">Next: group by people &rarr;</button></div>
+</section>
+
+<!-- ============ 10 PEOPLE ============ -->
+<section class="panel" data-s="10" hidden>
+  <div class="head"><h1>10 &middot; Group by people</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Sort the survivors by how many faces are in them, and decide how many selects each kind should contribute. An album needs portraits <em>and</em> group shots, not six of whichever kind happened to score best.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">10</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n" id="p-cut">0</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n" id="p-out">10</div><div class="l">after</div></div>
+    <div class="why"><strong>A sorting step, not a removal step.</strong> Nothing goes unless you switch a band off.
+      <div class="fbar"><span class="keepb" id="p-bk" style="width:100%"></span><span class="dropb" id="p-bd" style="width:0%"></span></div>
+      <div class="fkey"><span class="a"><i></i>keeping</span><span class="b"><i></i>removing</span></div></div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; people bands</h3><button class="reset" id="p-reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p30">
+        <div class="prm-name" style="margin-bottom:4px"><span class="nm-txt">How many selects from each band</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+        <p class="prm-how" style="margin-bottom:12px">Counts below are the <b>10 frames that reached this step</b>, measured. Set a quota per band and the final pick honours it instead of taking the six best overall.</p>
+
+        <div class="chk-list" id="band-list">
+          <div class="bandrow" data-band="solo">
+            <label class="prm-toggle"><input type="checkbox" checked data-pb="solo" data-n="2">
+              <span class="bandname">One person</span></label>
+            <span class="bandcount mono">2 photos</span>
+            <span class="bandctl"><input type="range" min="0" max="2" step="1" value="2" data-pq="solo"><span class="prm-val" id="q-solo">2</span></span>
+          </div>
+          <div class="bandrow" data-band="duo">
+            <label class="prm-toggle"><input type="checkbox" checked data-pb="duo" data-n="3">
+              <span class="bandname">Two people</span></label>
+            <span class="bandcount mono">3 photos</span>
+            <span class="bandctl"><input type="range" min="0" max="3" step="1" value="2" data-pq="duo"><span class="prm-val" id="q-duo">2</span></span>
+          </div>
+          <div class="bandrow" data-band="small">
+            <label class="prm-toggle"><input type="checkbox" checked data-pb="small" data-n="4">
+              <span class="bandname">Small group &mdash; 3 to 5</span></label>
+            <span class="bandcount mono">4 photos</span>
+            <span class="bandctl"><input type="range" min="0" max="4" step="1" value="1" data-pq="small"><span class="prm-val" id="q-small">1</span></span>
+          </div>
+          <div class="bandrow" data-band="large">
+            <label class="prm-toggle"><input type="checkbox" checked data-pb="large" data-n="1">
+              <span class="bandname">Large group &mdash; 6 or more</span></label>
+            <span class="bandcount mono">1 photo</span>
+            <span class="bandctl"><input type="range" min="0" max="1" step="1" value="1" data-pq="large"><span class="prm-val" id="q-large">1</span></span>
+          </div>
+          <div class="bandrow" data-band="none">
+            <label class="prm-toggle"><input type="checkbox" data-pb="none" data-n="0">
+              <span class="bandname">Nobody in frame</span></label>
+            <span class="bandcount mono">none here</span>
+            <span class="bandctl"><input type="range" min="0" max="1" step="1" value="0" data-pq="none"><span class="prm-val" id="q-none">0</span></span>
+          </div>
+        </div>
+
+        <div class="quota-sum" id="quota-sum"></div>
+
+        <p class="prm-how"><b>How to choose:</b> the slider is a quota, the checkbox decides whether the band exists at all. Unticking a band <em>removes</em> those photos from the funnel; a quota of 0 keeps them available but asks for none.
+          <br><b>Why this step matters on your batch:</b> across all 40 photos small groups are <b>23</b>, nearly 60%. Even among the 10 that reach here it is the biggest band, and only <b>2</b> are solo portraits. Picking the six best overall skews towards groups &mdash; quotas are how you guarantee a portrait of the bride is in there.
+          <br>A reasonable album spread is roughly <span class="ex">2 solo</span>, <span class="ex">2 couple</span>, <span class="ex">1 small</span>, <span class="ex">1 large</span>. If a band holds fewer photos than its quota, the shortfall goes to the next strongest band rather than being lost.</p>
+      </div>
+
+      <div class="prm" data-prm="p31">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Where a small group becomes a large one</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">proposed &mdash; aligns with config.GROUP_MIN_PEOPLE = 3</div></div>
+          <div class="prm-ctl"><input type="range" min="3" max="12" step="1" value="6" data-p="bandsplit"><span class="prm-val" id="v-bandsplit">6</span></div>
+        </div>
+        <div class="prm-scale"><span>3 almost everything is large</span><span>12 almost nothing is</span></div>
+        <p class="prm-how"><b>How to choose:</b> faces at or above this count are a "large group". The engine already uses <span class="mono">GROUP_MIN_PEOPLE = 3</span> to decide where a group begins, so 3 is where "small group" starts and this sets the upper boundary.
+          <br>Across all 40 photos the face counts run <span class="mono">1&times;6, 2&times;5, 3&times;12, 4&times;8, 5&times;3, 6&times;1, 7&times;2, 9&times;2</span>, so a split at <span class="ex">6</span> gives 23 small and 5 large. Moving it to <span class="ex">5</span> shifts 3 photos across; <span class="ex">4</span> evens the bands out considerably if you find 23 too lopsided.</p>
+        <div class="prm-hits none" id="h-bandsplit">of the 10 here: 4 small, 1 large at 6</div>
+      </div>
+
+      <div class="prm" data-prm="p32">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Smallest face that counts as a person</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">config.FACE_MIN_SIZE_RATIO &nbsp;default 0.02</div></div>
+          <div class="prm-ctl"><input type="range" min="0.01" max="0.20" step="0.01" value="0.02" data-p="pmin"><span class="prm-val" id="v-pmin">2%</span></div>
+        </div>
+        <div class="prm-scale"><span>1% counts the crowd</span><span>20% only the foreground</span></div>
+        <p class="prm-how"><b>How to choose:</b> this decides the band more than anything else here. At <span class="ex">2%</span> a guest in the background counts as a person, so a portrait of the bride with three onlookers behind her lands in "small group" rather than "one person".
+          <br>Raise it to <span class="ex">5&ndash;8%</span> if portraits are being pushed into group bands by bystanders. Lower it only when you genuinely want everyone present counted, such as a family line-up.
+          <br><b>Honest limitation:</b> this counts <em>faces the detector found</em>, not people. Someone turned away, behind another guest, or at the frame edge is invisible to it, so a large group is often undercounted.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">The bands</h2>
+  <p class="sect-n">Strongest frame of each shown. Pick any of them for your own set at any time.</p>
+
+  <div class="bandgrid">
+    <div class="bandcard">
+      <div class="bandhead"><span class="bh-t">One person</span><span class="bh-c mono">2 photos &middot; quota 2</span></div>
+      <div class="grid">
+        <article class="card sel"><div class="ph port"><s>7Y4A3156</s><span class="pin gold">1</span><span class="tab">77.5</span><span class="why2">1 face &middot; strongest solo</span></div>
+          <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">Clean, face in focus</div>
+          <button class="keepbtn" data-keep="p3156">&#128204; Pick this one</button></div></article>
+        <article class="card"><div class="ph land"><s>7Y4A3168</s><span class="tab">60.3</span><span class="why2">1 face</span></div>
+          <div class="cm"><div class="fn">7Y4A3168.JPG</div><div class="st clean">Clean, face in focus</div>
+          <button class="keepbtn" data-keep="p3168">&#128204; Pick this one</button></div></article>
+      </div>
+    </div>
+
+    <div class="bandcard">
+      <div class="bandhead"><span class="bh-t">Two people</span><span class="bh-c mono">3 photos &middot; quota 2</span></div>
+      <div class="grid">
+        <article class="card sel"><div class="ph land"><s>7Y4A3195</s><span class="pin">3</span><span class="tab">71.6</span><span class="why2">2 faces &middot; strongest pair</span></div>
+          <div class="cm"><div class="fn">7Y4A3195.JPG</div><div class="st clean">Clean, 2 faces</div>
+          <button class="keepbtn" data-keep="p3195">&#128204; Pick this one</button></div></article>
+        <article class="card sel"><div class="ph land"><s>7Y4A3152</s><span class="pin">5</span><span class="tab">70.7</span><span class="why2">2 faces</span></div>
+          <div class="cm"><div class="fn">7Y4A3152.JPG</div><div class="st clean">Clean, 2 faces</div>
+          <button class="keepbtn" data-keep="p3152">&#128204; Pick this one</button></div></article>
+      </div>
+    </div>
+
+    <div class="bandcard">
+      <div class="bandhead"><span class="bh-t">Small group &mdash; 3 to 5</span><span class="bh-c mono">4 photos &middot; quota 1</span></div>
+      <div class="grid">
+        <article class="card sel"><div class="ph land"><s>7Y4A3410</s><span class="pin">2</span><span class="tab">71.8</span><span class="why2">5 faces &middot; strongest small group</span></div>
+          <div class="cm"><div class="fn">7Y4A3410.JPG</div><div class="st minor">Grainy</div>
+          <button class="keepbtn" data-keep="p3410">&#128204; Pick this one</button></div></article>
+        <article class="card"><div class="ph land"><s>7Y4A3329</s><span class="tab">69.7</span><span class="why2">3 faces</span></div>
+          <div class="cm"><div class="fn">7Y4A3329.JPG</div><div class="st minor">Bright highlights</div>
+          <button class="keepbtn" data-keep="p3329">&#128204; Pick this one</button></div></article>
+        <article class="card"><div class="ph land"><s>7Y4A3146</s><span class="tab">68.3</span><span class="why2">3 faces</span></div>
+          <div class="cm"><div class="fn">7Y4A3146.JPG</div><div class="st clean">Clean, 3 faces</div>
+          <button class="keepbtn" data-keep="p3146">&#128204; Pick this one</button></div></article>
+      </div>
+    </div>
+
+    <div class="bandcard">
+      <div class="bandhead"><span class="bh-t">Large group &mdash; 6 or more</span><span class="bh-c mono">1 photo &middot; quota 1</span></div>
+      <div class="grid">
+        <article class="card sel"><div class="ph land"><s>7Y4A3398</s><span class="pin">4</span><span class="tab">71.1</span><span class="why2">7 faces &middot; strongest large group</span></div>
+          <div class="cm"><div class="fn">7Y4A3398.JPG</div><div class="st minor">Grainy</div>
+          <button class="keepbtn" data-keep="p3398">&#128204; Pick this one</button></div></article>
+        <article class="card"><div class="ph land"><s>7Y4A3196</s><span class="tab">27.0</span><span class="why2">9 faces &middot; largest in the batch</span></div>
+          <div class="cm"><div class="fn">7Y4A3196.JPG</div><div class="st major">Out of focus +3 more</div>
+          <button class="keepbtn" data-keep="p3196">&#128204; Pick this one</button></div></article>
+      </div>
+    </div>
+
+    <div class="bandcard off" id="band-none-card">
+      <div class="bandhead"><span class="bh-t">Nobody in frame</span><span class="bh-c mono">none reached this step</span></div>
+      <div class="grid">
+        <article class="card"><div class="ph land"><s>7Y4A3204</s><span class="tab">53.2</span><span class="why2">0 faces &middot; venue or detail shot</span></div>
+          <div class="cm"><div class="fn">7Y4A3204.JPG</div><div class="st minor">Nobody in frame</div>
+          <button class="keepbtn" data-keep="p3204">&#128204; Pick this one</button></div></article>
+      </div>
+    </div>
+  </div>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">DATA EXISTS</span>No new model needed. <code>face_count</code> is already measured on every photo by the existing YuNet probe, and <code>Candidate.face_count</code> carries it through. <strong>Only the banding, the quotas and this screen are new.</strong></p>
+    <p>The band boundaries line up with the engine's own <code>GROUP_MIN_PEOPLE = 3</code>, so this step agrees with how <span class="mono">wedding_album</span> already splits solo, couple and group sections.</p></div>
+
+  <div class="dn warn"><h4>Two limits worth knowing</h4>
+    <p><b>It counts faces, not people.</b> A guest turned away from the camera, half behind someone else, or cut by the frame edge is invisible to the detector. Large groups are routinely undercounted &mdash; your biggest frame reports 9 faces and almost certainly holds more.</p>
+    <p><b>It does not know <em>who</em> is in the photo.</b> "Two people" could be the couple or two cousins. Telling them apart needs identity clustering, which <span class="mono">wedding_album</span> already does with the SFace model and relationship labels &mdash; that is a much bigger feature than this step, and a separate decision.</p></div>
+
+  <div class="pile-slot" data-for="10"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="9">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="11">Next: one per moment &rarr;</button></div>
+</section>
+
+<!-- ============ 11 ONE PER MOMENT ============ -->
+<section class="panel" data-s="11" hidden>
+  <div class="head"><h1>10 &middot; One photo per moment</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">Frames can show the same moment without being duplicates. Only the best of each gets through.</p></div>
+
+  <div class="tally">
+    <div class="blk"><div class="n">10</div><div class="l">before</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk cut"><div class="n">4</div><div class="l">removed</div></div>
+    <div class="arw">&rarr;</div>
+    <div class="blk out"><div class="n">6</div><div class="l">after</div></div>
+    <div class="why">10 frames covering 6 distinct moments. One winner each.</div>
+  </div>
+
+  <div class="params">
+    <div class="params-h"><h3>Parameters &mdash; grouping and picking</h3><button class="reset">Reset to defaults</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p33">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">How alike counts as the same moment</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">config.SHOT_GROUP_THRESHOLD &nbsp;default 100</div></div>
+          <div class="prm-ctl"><input type="range" min="20" max="200" step="5" value="100" data-p="shot"><span class="prm-val" id="v-shot">100</span></div>
+        </div>
+        <div class="prm-scale"><span>20 almost nothing groups</span><span>200 everything merges</span></div>
+        <p class="prm-how"><b>How to choose:</b> same 256-bit hash distance as step 3, but looser. Step 3 asks "is this the same photograph?" at <span class="ex">60</span>; this asks "is this the same moment?" at <span class="ex">100</span>.
+          <br>The gap between the two is deliberate: frames 60&ndash;100 apart are not duplicates but do belong to one setup, so they compete with each other rather than with the whole shoot.
+          <br>Your batch gives <b>35 moments from 40 frames</b> at this setting, which is high because the sample skipped through the shoot. A continuous run groups far more tightly. Lower it to <span class="ex">60&ndash;80</span> if different poses are being merged.</p>
+          <div class="prm-hits none" id="h-shot">35 moments from 40 frames</div>
+      </div>
+
+      <div class="prm" data-prm="p34">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">How many selects</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">shortlist.run(want=...) &nbsp;default 6</div></div>
+          <div class="prm-ctl"><input type="range" min="1" max="20" step="1" value="6" data-p="want"><span class="prm-val" id="v-want">6</span></div>
+        </div>
+        <div class="prm-scale"><span>1 single hero shot</span><span>20 a full gallery</span></div>
+        <p class="prm-how"><b>How to choose:</b> picks are taken <b>round-robin</b> &mdash; the best of the strongest moment, then the best of the next, and only once every moment has contributed does it come back for second-best.
+          <br><b>Why that matters:</b> taking the top 6 scores outright returns six frames of whichever pose was lit best. That is one photograph six times, not a shortlist. This step is the difference between a shortlist and a pile.
+          <br>If you ask for more selects than there are moments, the extras come from second-best frames of the strongest moments.</p>
+      </div>
+
+      <div class="prm" data-prm="p35">
+        <div class="prm-top">
+          <div><label class="prm-toggle"><input type="checkbox" checked><span class="prm-name">Prefer frames with no major fault</span></label><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button>
+            <div class="prm-code">shortlist.pick(avoid_major_faults=True)</div></div>
+          <div class="prm-ctl"><span style="font-size:12.5px;color:var(--ink-faint)">on by default</span></div>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> leave on. Within each moment, clean frames are offered before flawed ones &mdash; but flawed frames are <em>held back, not excluded</em>. If you ask for 6 selects, you get 6; on a difficult batch the least-bad frame is the honest answer, and its reason line will name the fault rather than hide it.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="sect-t">The six survivors</h2>
+  <p class="sect-n">Each card shows what it beat. Swap, or keep the runner-up as well.</p>
+
+  <div class="grid grid-w">
+    <article class="card sel"><div class="ph port"><s>7Y4A3156</s><span class="pin gold">1</span><span class="tab">77.5</span></div>
+      <div class="cm"><div class="fn">7Y4A3156.JPG</div><div class="st clean">Clean, face in focus</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 1 other</button>
+      <button class="keepbtn" data-keep="m3156">&#128204; Pick the runner-up too</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3410</s><span class="pin">2</span><span class="tab">71.8</span></div>
+      <div class="cm"><div class="fn">7Y4A3410.JPG</div><div class="st minor">Grainy</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 2 others</button>
+      <button class="keepbtn" data-keep="m3410">&#128204; Pick the runner-up too</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3195</s><span class="pin">3</span><span class="tab">71.6</span></div>
+      <div class="cm"><div class="fn">7Y4A3195.JPG</div><div class="st clean">Clean, 2 faces</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Only frame of this moment</button></div></article>
+    <article class="card sel"><div class="ph land"><s>7Y4A3152</s><span class="pin">4</span><span class="tab">70.7</span></div>
+      <div class="cm"><div class="fn">7Y4A3152.JPG</div><div class="st clean">Clean, 2 faces</div>
+      <button class="btn btn-q btn-sm" style="margin-top:8px;width:100%">Swap &mdash; beat 1 other</button>
+      <button class="keepbtn" data-keep="m3152">&#128204; Pick the runner-up too</button></div></article>
+  </div>
+
+  <div class="pile-slot" data-for="11"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="10">&larr; Back</button>
+    <button class="btn btn-p btn-big" data-go="12">Next: the best photo &rarr;</button></div>
+</section>
+
+<!-- ============ 11 BEST ============ -->
+<section class="panel" data-s="12" hidden>
+  <div class="head"><h1>11 &middot; The best photo</h1><button class="info lg" type="button" aria-expanded="false" aria-label="About this step">i</button>
+    <p class="lede">One frame out of forty, and the full record of how it got here.</p></div>
+
+  <div class="winner">
+    <div class="ph port" style="border-radius:var(--r-sm)"><s>7Y4A3156</s><span class="pin gold">BEST OF 40</span></div>
+    <div>
+      <div class="bs">77.5<small> / 100</small></div>
+      <div class="fn" style="font-size:13px;margin-top:12px">7Y4A3156.JPG</div>
+      <div style="font-size:12.5px;color:var(--ink-faint)">4000&times;6000 &middot; portrait &middot; 1 face &middot; rotated 270&deg; at step 2</div>
+      <ul class="vl"><li><span class="p"></span><span><span class="w">Nothing wrong found. </span><span class="y">No measurement on this frame came out poorly.</span></span></li></ul>
+      <div class="mb">
+        <div class="mr"><span>Sharpness</span><span class="t"><span class="f hi" style="width:84%"></span></span><span class="v">84</span></div>
+        <div class="mr"><span>Exposure</span><span class="t"><span class="f hi" style="width:79%"></span></span><span class="v">79</span></div>
+        <div class="mr"><span>Contrast</span><span class="t"><span class="f" style="width:61%"></span></span><span class="v">61</span></div>
+        <div class="mr"><span>Colour</span><span class="t"><span class="f" style="width:58%"></span></span><span class="v">58</span></div>
+        <div class="mr"><span>Low noise</span><span class="t"><span class="f hi" style="width:88%"></span></span><span class="v">88</span></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+        <a class="btn btn-p" href="#">Download this photo</a>
+        <a class="btn btn-q" href="#">All 6 selects</a>
+        <a class="btn btn-q" href="#">My selections (<span id="manualN2">0</span>)</a>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sect-t">How it got here</h2>
+  <ul class="journey">
+    <li><span class="n">1</span><span>Added</span><span class="d"></span><span class="c">40</span></li>
+    <li><span class="n">2</span><span>Sideways fixed &mdash; 15 rotated, none removed</span><span class="d"></span><span class="c">40</span></li>
+    <li><span class="n">3</span><span>Duplicates &mdash; none found at distance 60</span><span class="d">0</span><span class="c">40</span></li>
+    <li><span class="n">4</span><span>Exposure &mdash; 3 blown, 1 washed out</span><span class="d">&minus;4</span><span class="c">36</span></li>
+    <li><span class="n">5</span><span>Focus &mdash; softest 22% of batch</span><span class="d">&minus;7</span><span class="c">29</span></li>
+    <li><span class="n">6</span><span>Subject &mdash; 4 face not in focus, 1 in shadow</span><span class="d">&minus;5</span><span class="c">24</span></li>
+    <li class="nbl"><span class="n">7</span><span>Expressions &mdash; 3 blinks, 2 flat <strong>(not built)</strong></span><span class="d">&minus;5</span><span class="c">19</span></li>
+    <li><span class="n">8</span><span>Grain &mdash; 13 flagged, none removed</span><span class="d">0</span><span class="c">19</span></li>
+    <li><span class="n">9</span><span>Narrowed to the strongest 10</span><span class="d">&minus;9</span><span class="c">10</span></li>
+    <li><span class="n">10</span><span>Grouped by people &mdash; 2 solo, 3 pairs, 4 small, 1 large</span><span class="d">0</span><span class="c">10</span></li>
+    <li><span class="n">11</span><span>One per moment, honouring the band quotas</span><span class="d">&minus;4</span><span class="c">6</span></li>
+    <li><span class="n">12</span><span><strong>The best</strong></span><span class="d">&minus;5</span><span class="c">1</span></li>
+    <li class="kl"><span class="n">&#128204;</span><span>Your picks &mdash; claimed before removal</span><span class="d"></span><span class="c" id="keptN3">0</span></li>
+    <li class="kl"><span class="n">&#8617;</span><span>Your picks &mdash; added back from the pile</span><span class="d"></span><span class="c" id="restN3">0</span></li>
+  </ul>
+
+  <div class="dn"><h4>Design note</h4>
+    <p><span class="f">NEW SCREEN</span>The journey is the point of the redesign: <strong>you can see exactly why 39 photographs did not make it</strong>, which step took each one, and click back to any decision that looks wrong.</p>
+    <p>Below this would sit the full ranking table from v0.02, for when you want more than one photograph.</p></div>
+
+  <div class="dn keepn"><h4>Two sets, delivered side by side</h4>
+    <p><span class="f">ENGINE</span>The numbered selects, <span class="mono">01_</span> to <span class="mono">06_</span>, are the funnel's own answer. Nothing you do by hand changes them &mdash; not the ranking, not the ordering, not which frames won their moment. That run stays reproducible and explainable.</p>
+    <p><span class="f">YOURS</span><span class="mono">Manually_Selected/</span> holds whatever you claimed, with original filenames and no numbering, because they were not ranked against anything. The journey below splits them into the two ways a frame can get there: <strong>kept</strong> before it was removed, or <strong>added back</strong> from the pile afterwards.</p>
+    <p>This matters most on the percentile steps. Focus takes the softest 22% of the batch whether or not those frames are genuinely soft, so on a well-shot wedding it will discard usable photographs simply because something had to be in the bottom fifth. The pile is how you retrieve them without touching the engine's logic.</p></div>
+
+  <h2 class="sect-t">Save the selected photos</h2>
+  <p class="sect-n">Choose where they go and what the folder is called. The engine's selects and your own picks are written side by side, never merged. Your originals are never moved or altered &mdash; copies are written to the destination.</p>
+
+  <div class="params">
+    <div class="params-h"><h3>Destination</h3><button class="reset" id="dest-reset">Reset to suggested</button></div>
+    <div class="params-b">
+
+      <div class="prm" data-prm="p36">
+        <div class="prm-name" style="margin-bottom:10px"><span class="nm-txt">Where to save</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+        <div class="radio-list" id="dest-where">
+          <label class="radio-row on"><input type="radio" name="where" value="shoot" checked>
+            <span><span class="rl2">Inside the shoot folder</span>
+              <span class="rp">~/Desktop/candid marriage/2_Muhurtham/</span>
+              <span class="rx">Suggested. The album sits with the photos it came from, so it travels with them and is obvious a year later.</span></span></label>
+
+          <label class="radio-row"><input type="radio" name="where" value="parent">
+            <span><span class="rl2">Beside the shoot folder</span>
+              <span class="rp">~/Desktop/candid marriage/</span>
+              <span class="rx">One level up, next to <span class="mono">1_Reception_Eve</span> and <span class="mono">2_Muhurtham</span>. Use this when you are exporting several ceremonies and want the albums together.</span></span></label>
+
+          <label class="radio-row"><input type="radio" name="where" value="desktop">
+            <span><span class="rl2">Desktop</span>
+              <span class="rp">~/Desktop/</span>
+              <span class="rx">Easy to find and easy to lose track of. Fine for a quick hand-off, poor for archiving.</span></span></label>
+
+          <label class="radio-row"><input type="radio" name="where" value="custom">
+            <span><span class="rl2">Somewhere else&hellip;</span>
+              <span class="rp" id="custom-path">choose a folder</span>
+              <span class="rx">Opens a folder picker. Pick an external drive if this is the delivery copy.</span></span></label>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> the default puts the album inside the shoot folder, which is what the existing album tool does and what <span class="mono">organizer.album_dir()</span> expects. It keeps the selection next to its source, so moving the shoot moves the album with it.
+          <br>Pick <span class="ex">Beside the shoot folder</span> when you will export more than one ceremony and want to compare them side by side. Avoid <span class="ex">Desktop</span> for anything you intend to keep.</p>
+      </div>
+
+      <div class="prm" data-prm="p37">
+        <div class="prm-top">
+          <div><div class="prm-name"><span class="nm-txt">Folder name</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+            <div class="prm-code">organizer.next_version_name() &nbsp;suggests BestImages_v1</div></div>
+          <div></div>
+        </div>
+        <input class="txtin" id="folder-name" value="BestImages_v1" spellcheck="false">
+        <div class="sugg" id="name-sugg">
+          <button data-n="BestImages_v1" class="on">BestImages_v1</button>
+          <button data-n="Muhurtham_Selects">Muhurtham_Selects</button>
+          <button data-n="Selects_2026-10-26">Selects_2026-10-26</button>
+          <button data-n="Top6_Muhurtham">Top6_Muhurtham</button>
+          <button data-n="Muhurtham_Final">Muhurtham_Final</button>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> <span class="ex">BestImages_v1</span> is the engine's own suggestion and the one I would take. The <span class="mono">_v1</span> matters: the tool counts existing versions and offers the next free number, so a second run <strong>never overwrites the first</strong>. That is what lets you change a threshold, export again, and compare the two.
+          <br><b>Worth knowing about your shoot:</b> <span class="mono">~/Desktop/candid marriage/</span> already contains a <span class="mono">BestImages_v1</span>. Saving there would suggest <span class="ex">BestImages_v2</span> instead. <span class="mono">2_Muhurtham/</span> has none, so <span class="mono">_v1</span> is free.
+          <br>Use a dated or descriptive name when the folder is leaving your machine &mdash; a client receiving "BestImages_v1" learns nothing from it, whereas "Muhurtham_Selects" explains itself.</p>
+        <div class="warnrow" id="name-warn" hidden>
+          <span class="ic">!</span>
+          <span><b>That folder already exists.</b> Nothing will be overwritten &mdash; choose a different name, or let the tool use the next free version number.</span>
+        </div>
+      </div>
+
+      <div class="prm" data-prm="p38">
+        <div class="prm-name" style="margin-bottom:8px"><span class="nm-txt">What to include</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+        <div class="chk-list">
+          <label class="chk-row"><input type="checkbox" checked data-inc="selects" data-n="6">
+            <span><b>The 6 selects</b><span class="cx">Numbered <span class="mono">01_</span> to <span class="mono">06_</span> so the order survives the folder, whatever sorts them next.</span></span></label>
+          <label class="chk-row"><input type="checkbox" checked data-inc="kept" data-n="0">
+            <span><b>Your manual selections</b><span class="cx">Into <span class="mono">Manually_Selected/</span>, keeping their original filenames. These never enter the numbered selects, so the engine's ordering stays exactly as it was.</span></span></label>
+          <label class="chk-row"><input type="checkbox" checked data-inc="notes" data-n="0">
+            <span><b>Why these photos</b><span class="cx"><span class="mono">why_these_photos.txt</span> &mdash; each pick with its score, rank and the reason it won. Useful when a client asks.</span></span></label>
+          <label class="chk-row"><input type="checkbox" checked data-inc="csv" data-n="0">
+            <span><b>Full ranking</b><span class="cx"><span class="mono">ranking.csv</span> &mdash; all 40 frames with scores, faults and which step removed each. Opens in a spreadsheet.</span></span></label>
+          <label class="chk-row"><input type="checkbox" data-inc="rejects" data-n="0">
+            <span><b>The rejected frames too</b><span class="cx">Into <span class="mono">Rejected/</span>, grouped by the step that removed them. Off by default &mdash; it copies 33 more files and the originals are still on your drive.</span></span></label>
+          <label class="chk-row"><input type="checkbox" data-inc="vertical" data-n="0">
+            <span><b>9:16 vertical versions</b><span class="cx">Into <span class="mono">Vertical/</span>, for reels and stories. Written as new files; the originals are untouched.</span></span></label>
+        </div>
+        <p class="prm-how"><b>How to choose:</b> the first four are on by default and I would leave them. The notes and the CSV cost a few kilobytes and answer "why this one?" months later when nobody remembers.
+          <br>Turn on <span class="ex">rejected frames</span> only when handing the folder to someone who has no access to the originals. Turn on <span class="ex">9:16</span> if the selects are going to social media, remembering that for a landscape frame it pads with a blurred surround rather than inventing scenery.</p>
+      </div>
+
+      <div class="prm" data-prm="p39">
+        <div class="prm-name" style="margin-bottom:6px"><span class="nm-txt">This is what will be written</span><button class="info" type="button" aria-expanded="false" aria-label="How to choose this">i</button></div>
+        <div class="pathbox">
+          <span class="lbl">Full path</span>
+          <span class="full" id="path-preview">~/Desktop/candid marriage/2_Muhurtham/BestImages_v1/</span>
+          <div class="tree" id="tree-preview"></div>
+        </div>
+        <p class="prm-how"><b>Before you press save:</b> read the path. This is the one step that writes to your disk, and a wrong destination is tedious to undo by hand. Nothing is ever overwritten &mdash; if the folder exists the tool stops and asks.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+    <button class="btn btn-p btn-big" id="save-btn">Save 6 photos to BestImages_v1</button>
+    <button class="btn btn-q btn-big">Download as a zip instead</button>
+  </div>
+
+  <div class="pile-slot" data-for="13"></div>
+
+  <div class="pile-slot" data-for="11"></div>
+
+  <div class="nav"><button class="btn btn-q" data-go="11">&larr; Back</button>
+    <button class="btn btn-q" data-go="1">Start a new batch</button></div>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p><strong>This is a mockup.</strong> No server, no uploads, no analysis, no external requests. Hatched tiles stand in for photographs; sideways labels mark the 15 frames stored rotated.</p>
+  <p>Parameter defaults are the real constants from <span class="mono">diagnose.py</span>, <span class="mono">shortlist.py</span>, <span class="mono">vertical.py</span> and <span class="mono">config.py</span>. Counts on steps 1&ndash;6 and 8&ndash;11 are measured from the real 40-photo batch. <strong>Step 7 is illustrative only &mdash; no expression code exists.</strong></p>
+  <p>Live here: every slider and checkbox updates its step's counts, and every <span style="color:var(--keep);font-weight:650">&#128204; Keep</span> button works.</p>
+</footer>
+
+<script>
+"use strict";
+var STEPS=[
+ {n:1, name:"Add",        count:40, delta:""},
+ {n:2, name:"Straighten", count:40, delta:"15 turned"},
+ {n:3, name:"Duplicates", count:40, delta:"0 out"},
+ {n:4, name:"Exposure",   count:36, delta:"4 out"},
+ {n:5, name:"Focus",      count:29, delta:"7 out"},
+ {n:6, name:"Subject",    count:24, delta:"5 out"},
+ {n:7, name:"Expressions",count:19, delta:"5 out", nb:true},
+ {n:8, name:"Grain",      count:19, delta:"0 out"},
+ {n:9, name:"Narrow",     count:19, delta:"0 out"},
+ {n:10,name:"People",     count:19, delta:"0 out"},
+ {n:11,name:"Per moment", count:6,  delta:"13 out"},
+ {n:12,name:"The best",   count:1,  delta:"5 out"}
+];
+var cur=1, kept=Object.create(null), restored=Object.create(null);
+
+/* Everything the funnel rejected, and which step did it. This is the pile the
+   user can reach from any later step. Real filenames and reasons from the
+   40-photo batch; step 7 entries are illustrative, like that whole step. */
+var REJECTED=[
+ {n:"7Y4A3269.JPG", s:4, r:"31% of frame pure white",       shape:"land"},
+ {n:"7Y4A3296.JPG", s:4, r:"18% of frame pure white",       shape:"land"},
+ {n:"7Y4A3302.JPG", s:4, r:"14% of frame pure white",       shape:"land"},
+ {n:"7Y4A3248.JPG", s:4, r:"average brightness 247/255",    shape:"port"},
+ {n:"7Y4A3355.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3139.JPG", s:5, r:"softest 22% of batch",          shape:"port"},
+ {n:"7Y4A3237.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3306.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3255.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3231.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3196.JPG", s:5, r:"softest 22% of batch",          shape:"land"},
+ {n:"7Y4A3320.JPG", s:6, r:"face 61 vs frame 142 bright",   shape:"land"},
+ {n:"7Y4A3313.JPG", s:6, r:"face at 9% of frame sharpness", shape:"land"},
+ {n:"7Y4A3364.JPG", s:6, r:"face at 13% of frame sharpness",shape:"land"},
+ {n:"7Y4A3417.JPG", s:6, r:"face at 15% of frame sharpness",shape:"land"},
+ {n:"7Y4A3392.JPG", s:6, r:"face at 21% of frame sharpness",shape:"land"},
+ {n:"7Y4A3192.JPG", s:7, r:"eyes closed 0.84",              shape:"land"},
+ {n:"7Y4A3204.JPG", s:7, r:"neutral 0.88",                  shape:"land"},
+ {n:"7Y4A3263.JPG", s:7, r:"eyes closed 0.71",              shape:"land"},
+ {n:"7Y4A3276.JPG", s:7, r:"neutral 0.81",                  shape:"land"},
+ {n:"7Y4A3289.JPG", s:7, r:"eyes closed 0.77",              shape:"land"},
+ {n:"7Y4A3174.JPG", s:9, r:"rank 11 of 19",                 shape:"land"},
+ {n:"7Y4A3180.JPG", s:9, r:"rank 12 of 19",                 shape:"port"},
+ {n:"7Y4A3186.JPG", s:9, r:"rank 13 of 19",                 shape:"land"},
+ {n:"7Y4A3212.JPG", s:9, r:"rank 14 of 19",                 shape:"port"},
+ {n:"7Y4A3348.JPG", s:9, r:"rank 15 of 19",                 shape:"land"},
+ {n:"7Y4A3283.JPG", s:9, r:"rank 16 of 19",                 shape:"port"},
+ {n:"7Y4A3329.JPG", s:9, r:"rank 17 of 19",                 shape:"land"},
+ {n:"7Y4A3372.JPG", s:9, r:"rank 18 of 19",                 shape:"land"},
+ {n:"7Y4A3195b.JPG",s:9, r:"rank 19 of 19",                 shape:"land"},
+ {n:"7Y4A3162.JPG", s:10,r:"beaten within its moment",      shape:"land"},
+ {n:"7Y4A3168.JPG", s:10,r:"beaten within its moment",      shape:"port"},
+ {n:"7Y4A3404.JPG", s:10,r:"beaten within its moment",      shape:"land"},
+ {n:"7Y4A3218.JPG", s:10,r:"beaten within its moment",      shape:"port"},
+ {n:"7Y4A3410.JPG", s:11,r:"select, but not the top frame", shape:"land"},
+ {n:"7Y4A3195.JPG", s:11,r:"select, but not the top frame", shape:"land"},
+ {n:"7Y4A3398.JPG", s:11,r:"select, but not the top frame", shape:"land"},
+ {n:"7Y4A3152.JPG", s:11,r:"select, but not the top frame", shape:"land"},
+ {n:"7Y4A3146.JPG", s:11,r:"select, but not the top frame", shape:"land"}
+];
+
+var STEPNAME={3:"Duplicates",4:"Exposure",5:"Focus",6:"Subject",7:"Expressions",
+              8:"Grain",9:"Narrow",10:"People",11:"Per moment",12:"Not the top frame"};
+
+function $(i){return document.getElementById(i)}
+function mk(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+
+function rail(){
+  var r=$("rail");r.innerHTML="";
+  STEPS.forEach(function(s){
+    var b=mk("button","rl"+(s.n===cur?" on":"")+(s.nb?" nb":""));
+    b.type="button";
+    if(s.nb)b.appendChild(mk("span","nbt","todo"));
+    b.appendChild(mk("div","k",s.n));
+    b.appendChild(mk("div","nm",s.name));
+    b.appendChild(mk("div","ct",s.count));
+    var isCut=s.delta.indexOf("0 out")!==0&&s.delta.indexOf("out")>-1;
+    b.appendChild(mk("div","dl"+(isCut?" cut":""),s.delta));
+    b.addEventListener("click",function(){show(s.n)});
+    r.appendChild(b);
+  });
+}
+function manualCount(){
+  return Object.keys(kept).length+Object.keys(restored).length;
+}
+
+function paintKept(){
+  var n=Object.keys(kept).length, r=Object.keys(restored).length, m=n+r;
+  ["manualN","manualN2"].forEach(function(id){if($(id))$(id).textContent=m});
+  ["keptN3"].forEach(function(id){if($(id))$(id).textContent=n});
+  ["restN3"].forEach(function(id){if($(id))$(id).textContent=r});
+}
+
+/* Build the rejected pile for one step: everything removed BEFORE it.
+   Rendered by script rather than copied into eight sections, so the
+   behaviour cannot drift between steps. */
+function buildPile(slot){
+  var upto=Number(slot.dataset.for);
+  var items=REJECTED.filter(function(x){return x.s<upto});
+  slot.innerHTML="";
+
+  var box=mk("div","pile closed");
+
+  var head=mk("button","pile-h");head.type="button";
+  head.appendChild(mk("span","caret","\u25B6"));
+  head.appendChild(mk("span","ttl","Rejected so far \u2014 add any to your own picks"));
+  var cnt=mk("span","cnt"+(items.length?"":" zero"),
+             items.length?String(items.length):"none yet");
+  head.appendChild(cnt);
+  head.addEventListener("click",function(){
+    box.classList.toggle("closed");box.classList.toggle("open");
+  });
+  box.appendChild(head);
+
+  var body=mk("div","pile-b");
+
+  if(!items.length){
+    body.appendChild(mk("p","pile-empty",
+      "Nothing has been rejected yet. Once a step removes something it appears here, and stays reachable from every step after."));
+  }else{
+    var note=mk("p","pile-note");
+    note.innerHTML="These <b>"+items.length+"</b> frames were removed by earlier steps and are still on disk. "+
+      "Adding one back puts it in <b>your manual selections</b> &mdash; it does <b>not</b> rejoin the funnel, "+
+      "does not affect the ranking, and cannot change which frames become selects. "+
+      "The engine's flow is left exactly as it was; your picks are delivered alongside it in their own folder.";
+    body.appendChild(note);
+
+    var steps=[];
+    items.forEach(function(x){if(steps.indexOf(x.s)<0)steps.push(x.s)});
+    steps.sort(function(a,b){return a-b});
+
+    steps.forEach(function(st){
+      var g=mk("div","pile-group");
+      var gh=mk("div","pile-gh");
+      gh.appendChild(mk("span","sq"));
+      gh.appendChild(mk("span",null,"Step "+st+" \u00b7 "+(STEPNAME[st]||"")+
+        " \u2014 "+items.filter(function(x){return x.s===st}).length+" removed"));
+      g.appendChild(gh);
+
+      var row=mk("div","pile-row");
+      items.filter(function(x){return x.s===st}).forEach(function(x){
+        var back=!!restored[x.n];
+        var it=mk("div","pile-item"+(back?" back":""));
+
+        var ph=mk("div","ph "+x.shape);
+        ph.appendChild(mk("s",null,x.n.replace(".JPG","")));
+        if(back){var l=mk("span","lockmark");l.appendChild(mk("b",null,"your pick"));ph.appendChild(l)}
+        it.appendChild(ph);
+
+        it.appendChild(mk("div","nm",x.n));
+        it.appendChild(mk("div","rs",back?"in your manual selections":x.r));
+
+        var b=mk("button","backbtn"+(back?" on":""));
+        b.type="button";
+        /* U+1F4CC is outside the BMP, so it needs the surrogate pair.
+           "\u1F4CC" would silently render as U+1F4C followed by "C". */
+        b.textContent=back?"\uD83D\uDCCC Picked by you":"\u21A9 Add to my picks";
+        b.addEventListener("click",function(){
+          if(restored[x.n])delete restored[x.n]; else restored[x.n]=true;
+          paintAllPiles();paintKept();
+          if($("path-preview"))paintDest();
+        });
+        it.appendChild(b);
+
+        row.appendChild(it);
+      });
+      g.appendChild(row);
+      body.appendChild(g);
+    });
+  }
+
+  box.appendChild(body);
+  slot.appendChild(box);
+}
+
+function paintAllPiles(){
+  document.querySelectorAll(".pile-slot").forEach(buildPile);
+}
+
+function show(n){
+  cur=n;
+  document.querySelectorAll("[data-s]").forEach(function(p){p.hidden=Number(p.dataset.s)!==n});
+  /* The engine's count only. Manual selections are deliberately NOT added
+     here: they sit in their own set and must not change the funnel's maths,
+     its ranking, or which frames become selects. */
+  $("liveN").textContent=STEPS[n-1].count;
+  rail();paintKept();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---- slider readouts, formatted per parameter ---- */
+var FMT={
+  blown:function(v){return Math.round(v*100)+"%"},
+  shadow:function(v){return Math.round(v*100)+"%"},
+  hot:function(v){return Math.round(v*100)+"%"},
+  soft:function(v){return v+"%"},
+  slight:function(v){return v+"%"},
+  grain:function(v){return v+"%"},
+  fmin:function(v){return Math.round(v*100)+"%"},
+  emin:function(v){return Math.round(v*100)+"%"}
+};
+document.querySelectorAll("input[data-p]").forEach(function(s){
+  if(s.type!=="range")return;
+  s.addEventListener("input",function(){
+    var p=s.dataset.p,out=$("v-"+p);
+    if(out)out.textContent=FMT[p]?FMT[p](s.value):s.value;
+    if(p==="wkeep"){
+      var keep=Number(s.value),total=19;
+      $("w-out").textContent=keep;$("w-cut").textContent=total-keep;
+      $("w-bk").style.width=(keep/total*100)+"%";
+      $("w-bd").style.width=((total-keep)/total*100)+"%";
+      $("h-wkeep").textContent="removing the weakest "+(total-keep)+" of "+total;
+    }
+  });
+});
+
+/* ---- per-step recount from the fault checkboxes ---- */
+function recount(attr,total,cutId,outId,bkId,bdId){
+  var cut=0;
+  document.querySelectorAll("input["+attr+"]").forEach(function(i){
+    var row=i.closest(".prm");
+    if(row)row.classList.toggle("offp",!i.checked);
+    if(i.checked)cut+=Number(i.dataset.n||0);
+  });
+  if(cut>total)cut=total;
+  $(cutId).textContent=cut;$(outId).textContent=total-cut;
+  $(bkId).style.width=((total-cut)/total*100)+"%";
+  $(bdId).style.width=(cut/total*100)+"%";
+}
+function wire(attr,total,cutId,outId,bkId,bdId){
+  document.querySelectorAll("input["+attr+"]").forEach(function(i){
+    i.addEventListener("change",function(){recount(attr,total,cutId,outId,bkId,bdId)});
+  });
+  recount(attr,total,cutId,outId,bkId,bdId);
+}
+wire("data-x",40,"x-cut","x-out","x-bk","x-bd");
+wire("data-f",36,"f-cut","f-out","f-bk","f-bd");
+wire("data-sb",29,"s-cut","s-out","s-bk","s-bd");
+wire("data-e",24,"e-cut","e-out","e-bk","e-bd");
+wire("data-g",19,"g-cut","g-out","g-bk","g-bd");
+
+/* ---- keep buttons, and step navigation ---- */
+document.addEventListener("click",function(ev){
+  var g=ev.target.closest?ev.target.closest("[data-go]"):null;
+  if(g){show(Number(g.dataset.go));return}
+
+  var k=ev.target.closest?ev.target.closest("[data-keep]"):null;
+  if(k){
+    var id=k.dataset.keep,card=k.closest(".card");
+    if(kept[id]){
+      delete kept[id];
+      k.classList.remove("on");
+      k.innerHTML="&#128204; Pick this one";
+      if(card){
+        card.classList.remove("locked");
+        var lm=card.querySelector(".lockmark");if(lm)lm.remove();
+        if(card.dataset.hadx==="1"&&!card.querySelector(".xmark")){
+          var x=mk("span","xmark");x.appendChild(mk("b",null,"remove"));
+          card.querySelector(".ph").appendChild(x);
+        }
+      }
+    }else{
+      kept[id]=true;
+      k.classList.add("on");
+      k.innerHTML="&#128204; Picked by you";
+      if(card){
+        card.classList.add("locked");
+        var ex=card.querySelector(".xmark");
+        if(ex){card.dataset.hadx="1";ex.remove()}
+        if(!card.querySelector(".lockmark")){
+          var l=mk("span","lockmark");l.appendChild(mk("b",null,"your pick"));
+          card.querySelector(".ph").appendChild(l);
+        }
+      }
+    }
+    paintKept();
+    if($("path-preview"))paintDest();
+  }
+});
+
+document.addEventListener("keydown",function(ev){
+  if(ev.target.tagName==="INPUT"||ev.target.tagName==="SELECT")return;
+  if(ev.key==="ArrowRight"&&cur<STEPS.length)show(cur+1);
+  if(ev.key==="ArrowLeft"&&cur>1)show(cur-1);
+});
+
+/* ==========================================================================
+   POPOVERS
+   The guidance still lives in the DOM next to the control it describes, which
+   keeps it findable and keeps the markup honest. CSS hides it; this lifts a
+   clone into a floating panel on demand. Nothing is duplicated by hand.
+   ========================================================================== */
+var popShade=null, popEl=null, popOwner=null;
+
+function closePop(){
+  if(!popEl)return;
+  popEl.classList.remove("on");
+  popShade.classList.remove("on");
+  if(popOwner)popOwner.setAttribute("aria-expanded","false");
+  var el=popEl, sh=popShade, own=popOwner;
+  popEl=popShade=popOwner=null;
+  setTimeout(function(){
+    if(el&&el.parentNode)el.parentNode.removeChild(el);
+    if(sh&&sh.parentNode)sh.parentNode.removeChild(sh);
+  },170);
+  if(own)own.focus();
+}
+
+/* Place the panel near its trigger, then pull it back inside the viewport.
+   Done after insertion so the measured height is the real one. */
+function placePop(btn,el){
+  var r=btn.getBoundingClientRect(), m=12;
+  var w=el.offsetWidth, h=el.offsetHeight;
+  var left=r.left+r.width/2-w/2;
+  left=Math.max(m,Math.min(window.innerWidth-w-m,left));
+  var top=r.bottom+10;
+  if(top+h>window.innerHeight-m)top=Math.max(m,r.top-h-10);
+  el.style.left=left+"px";
+  el.style.top=top+"px";
+}
+
+function openPop(btn,title,sub,bodyNode,range){
+  closePop();
+
+  popShade=document.createElement("div");
+  popShade.className="pop-shade";
+  popShade.addEventListener("click",closePop);
+  document.body.appendChild(popShade);
+
+  popEl=document.createElement("div");
+  popEl.className="pop";
+  popEl.setAttribute("role","dialog");
+  popEl.setAttribute("aria-modal","true");
+
+  var head=mk("div","pop-h");
+  var tw=mk("div");
+  tw.appendChild(mk("div","pop-t",title));
+  if(sub)tw.appendChild(mk("div","pop-sub",sub));
+  head.appendChild(tw);
+  var x=mk("button","pop-x","\u00d7");
+  x.type="button";x.setAttribute("aria-label","Close");
+  x.addEventListener("click",closePop);
+  head.appendChild(x);
+  popEl.appendChild(head);
+
+  if(range){
+    var rg=mk("div","pop-range");
+    range.forEach(function(t){rg.appendChild(mk("span",null,t))});
+    popEl.appendChild(rg);
+  }
+
+  var body=mk("div","pop-body");
+  if(bodyNode)body.appendChild(bodyNode);
+  popEl.appendChild(body);
+
+  document.body.appendChild(popEl);
+  placePop(btn,popEl);
+  requestAnimationFrame(function(){
+    popEl.classList.add("on");popShade.classList.add("on");
+  });
+
+  popOwner=btn;
+  btn.setAttribute("aria-expanded","true");
+  x.focus();
+}
+
+/* info button on a parameter row */
+document.addEventListener("click",function(ev){
+  var btn=ev.target.closest?ev.target.closest(".info"):null;
+  if(!btn)return;
+  ev.preventDefault();ev.stopPropagation();
+
+  if(popOwner===btn){closePop();return}
+
+  var prm=btn.closest(".prm");
+  if(prm){
+    var nameEl=prm.querySelector(".nm-txt")||prm.querySelector(".prm-name");
+    var codeEl=prm.querySelector(".prm-code");
+    var howEl=prm.querySelector(".prm-how");
+    var scaleEl=prm.querySelector(".prm-scale");
+    var range=null;
+    if(scaleEl)range=Array.prototype.map.call(scaleEl.children,function(c){return c.textContent});
+    openPop(btn,
+      nameEl?nameEl.textContent.trim():"How to choose",
+      codeEl?codeEl.textContent.trim():"",
+      howEl?howEl.cloneNode(true):null,
+      range);
+    return;
+  }
+
+  /* step-level notes button */
+  var sec=btn.closest("[data-s]");
+  if(sec){
+    var wrap=mk("div");
+    sec.querySelectorAll(".dn, .nbbanner").forEach(function(n){
+      var c=n.cloneNode(true);
+      c.style.display="block";
+      c.style.margin="0 0 12px";
+      wrap.appendChild(c);
+    });
+    var lede=sec.querySelector(".lede");
+    if(lede){
+      var l=mk("p");l.innerHTML="<b>"+lede.innerHTML+"</b>";
+      wrap.insertBefore(l,wrap.firstChild);
+    }
+    openPop(btn,"About this step",
+      sec.querySelector("h1")?sec.querySelector("h1").textContent.trim():"",
+      wrap,null);
+  }
+},true);
+
+document.addEventListener("keydown",function(ev){
+  if(ev.key==="Escape")closePop();
+});
+window.addEventListener("resize",closePop);
+
+/* ---- people bands: quotas and on/off ---- */
+var BANDS=["solo","duo","small","large","none"];
+
+function paintBands(){
+  var total=10, removed=0, quota=0;
+
+  BANDS.forEach(function(b){
+    var on=document.querySelector('input[data-pb="'+b+'"]');
+    var sl=document.querySelector('input[data-pq="'+b+'"]');
+    var row=on?on.closest(".bandrow"):null;
+    var have=on?Number(on.dataset.n||0):0;
+
+    if(row)row.classList.toggle("off",!on.checked);
+    if(sl)sl.disabled=!on.checked;
+
+    /* Unticking a band removes its photos. A quota of 0 keeps them
+       available but asks for none - a deliberately different thing. */
+    if(on&&!on.checked)removed+=have;
+    else if(sl)quota+=Math.min(Number(sl.value),have);
+
+    var out=$("q-"+b);
+    if(out&&sl)out.textContent=sl.value;
+  });
+
+  $("p-cut").textContent=removed;
+  $("p-out").textContent=total-removed;
+  $("p-bk").style.width=((total-removed)/total*100)+"%";
+  $("p-bd").style.width=(removed/total*100)+"%";
+
+  var card=$("band-none-card");
+  var noneOn=document.querySelector('input[data-pb="none"]');
+  if(card&&noneOn)card.classList.toggle("off",!noneOn.checked);
+
+  var sum=$("quota-sum");
+  if(sum){
+    if(quota===0){
+      sum.className="quota-sum over";
+      sum.textContent="Every quota is 0 \u2014 the next step would have nothing to choose from.";
+    }else{
+      sum.className="quota-sum";
+      sum.textContent="Quotas total "+quota+" select"+(quota===1?"":"s")+
+        ", drawn one per moment within each band.";
+    }
+  }
+}
+
+document.querySelectorAll("input[data-pb]").forEach(function(c){
+  c.addEventListener("change",paintBands);
+});
+document.querySelectorAll("input[data-pq]").forEach(function(sl){
+  sl.addEventListener("input",paintBands);
+});
+var pReset=$("p-reset");
+if(pReset)pReset.addEventListener("click",function(){
+  var def={solo:2,duo:2,small:1,large:1,none:0};
+  BANDS.forEach(function(b){
+    var on=document.querySelector('input[data-pb="'+b+'"]');
+    var sl=document.querySelector('input[data-pq="'+b+'"]');
+    if(on)on.checked=(b!=="none");
+    if(sl)sl.value=def[b];
+  });
+  paintBands();
+});
+
+/* ---- destination panel ---- */
+var DEST={
+  shoot:   "~/Desktop/candid marriage/2_Muhurtham/",
+  parent:  "~/Desktop/candid marriage/",
+  desktop: "~/Desktop/",
+  custom:  "~/Volumes/Delivery/"
+};
+/* Folder names already present, so the "exists" warning is truthful.
+   Taken from the real shoot: candid marriage/ has BestImages_v1 already. */
+var EXISTING={
+  "~/Desktop/candid marriage/": ["BestImages_v1"],
+  "~/Desktop/candid marriage/2_Muhurtham/": [],
+  "~/Desktop/": [],
+  "~/Volumes/Delivery/": []
+};
+
+function destBase(){
+  var r=document.querySelector('input[name="where"]:checked');
+  return DEST[r?r.value:"shoot"];
+}
+
+function suggestedName(){
+  var used=EXISTING[destBase()]||[];
+  var n=1;
+  while(used.indexOf("BestImages_v"+n)>-1)n++;
+  return "BestImages_v"+n;
+}
+
+function paintDest(){
+  var base=destBase(), name=($("folder-name").value||"").trim()||suggestedName();
+
+  document.querySelectorAll("#dest-where .radio-row").forEach(function(row){
+    row.classList.toggle("on",row.querySelector("input").checked);
+  });
+
+  $("path-preview").textContent=base+name+"/";
+
+  var used=EXISTING[base]||[];
+  $("name-warn").hidden=used.indexOf(name)<0;
+
+  /* tree reflects the include checkboxes, so the preview is honest */
+  var inc={};
+  document.querySelectorAll("input[data-inc]").forEach(function(c){inc[c.dataset.inc]=c.checked});
+
+  var lines=[];
+  lines.push("<b>"+name+"/</b>");
+  if(inc.selects){
+    lines.push("  01_7Y4A3156.JPG        77.5  best of 40");
+    lines.push("  02_7Y4A3410.JPG        71.8");
+    lines.push("  03_7Y4A3195.JPG        71.6");
+    lines.push("  04_7Y4A3398.JPG        71.1");
+    lines.push("  05_7Y4A3152.JPG        70.7");
+    lines.push("  06_7Y4A3146.JPG        68.3");
+  }
+  var nKept=manualCount();
+  if(inc.kept){
+    if(nKept){
+      lines.push("  <b>Manually_Selected/</b>");
+      var shown=Object.keys(kept).concat(Object.keys(restored)).slice(0,6);
+      shown.forEach(function(k){
+        var hit=REJECTED.filter(function(x){return x.n===k})[0];
+        lines.push("    "+(hit?hit.n:k)+"        your pick");
+      });
+      if(nKept>shown.length)lines.push("    \u2026 and "+(nKept-shown.length)+" more");
+    }else{
+      lines.push("  <b>Manually_Selected/</b>     (empty \u2014 you have not overruled anything)");
+    }
+  }
+  if(inc.vertical){
+    lines.push("  <b>Vertical/</b>");
+    lines.push("    6 frames at 1080\u00d71920");
+  }
+  if(inc.rejects){
+    lines.push("  <b>Rejected/</b>");
+    lines.push("    04_Exposure/        4 photos");
+    lines.push("    05_Focus/           7 photos");
+    lines.push("    06_Subject/         5 photos");
+    lines.push("    07_Expressions/     5 photos");
+    lines.push("    09_Narrow/          9 photos");
+    lines.push("    10_Per_moment/      4 photos");
+  }
+  if(inc.notes)lines.push("  why_these_photos.txt");
+  if(inc.csv)lines.push("  ranking.csv            all 40 frames");
+
+  $("tree-preview").innerHTML=lines.join("\n");
+
+  var count=inc.selects?6:0;
+  if(inc.kept)count+=nKept;
+  $("save-btn").textContent="Save "+count+" photo"+(count===1?"":"s")+" to "+name;
+}
+
+document.querySelectorAll('input[name="where"]').forEach(function(r){
+  r.addEventListener("change",function(){
+    /* follow the suggestion when switching destination, since the free
+       version number differs per folder */
+    $("folder-name").value=suggestedName();
+    document.querySelectorAll("#name-sugg button").forEach(function(b){
+      b.classList.toggle("on",b.dataset.n===$("folder-name").value);
+    });
+    paintDest();
+  });
+});
+$("folder-name").addEventListener("input",function(){
+  document.querySelectorAll("#name-sugg button").forEach(function(b){
+    b.classList.toggle("on",b.dataset.n===$("folder-name").value.trim());
+  });
+  paintDest();
+});
+document.querySelectorAll("#name-sugg button").forEach(function(b){
+  b.addEventListener("click",function(){
+    $("folder-name").value=b.dataset.n;
+    document.querySelectorAll("#name-sugg button").forEach(function(o){
+      o.classList.toggle("on",o===b);
+    });
+    paintDest();
+  });
+});
+document.querySelectorAll("input[data-inc]").forEach(function(c){
+  c.addEventListener("change",paintDest);
+});
+$("dest-reset").addEventListener("click",function(){
+  document.querySelector('input[name="where"][value="shoot"]').checked=true;
+  $("folder-name").value=suggestedName();
+  document.querySelectorAll("input[data-inc]").forEach(function(c){
+    c.checked=["selects","kept","notes","csv"].indexOf(c.dataset.inc)>-1;
+  });
+  document.querySelectorAll("#name-sugg button").forEach(function(b){
+    b.classList.toggle("on",b.dataset.n===$("folder-name").value);
+  });
+  paintDest();
+});
+
+paintAllPiles();paintBands();paintDest();rail();show(1);
+</script>
+</body>
+</html>
