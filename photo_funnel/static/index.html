@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Funnel</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="shell top-in">
+    <div class="brand"><span class="mk" aria-hidden="true"></span><span class="bn">Photo Funnel</span></div>
+    <div class="live" aria-live="polite">
+      <span><span class="big mono" id="liveN">0</span> <span class="faint" id="liveL">photos</span></span>
+      <button type="button" class="chip-keep" id="picksChip" title="Your manual selections">
+        <span aria-hidden="true">&#128204;</span> <span id="picksN">0</span> manually selected
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="rail" aria-label="Steps"><div class="shell"><div class="rail-in" id="rail"></div></div></nav>
+
+<div class="shell"><div id="toast" class="toast" role="status" aria-live="polite" hidden></div></div>
+
+<main class="shell" id="stage"></main>
+
+<footer class="shell foot">
+  <span>Runs entirely on this machine. Your original photos are copied, never modified.</span>
+  <span class="mono faint" id="ver"></span>
+</footer>
+
+<div id="busy" class="busy" hidden>
+  <div class="busy-card">
+    <div class="busy-row"><span id="busyStage">Working</span><span class="mono" id="busyCount"></span></div>
+    <div class="meter"><span id="busyFill"></span></div>
+  </div>
+</div>
+
+<div id="lightbox" class="lb" hidden role="dialog" aria-modal="true" aria-labelledby="lbName">
+  <div class="lb-bar">
+    <div class="lb-id"><span class="lb-rank mono" id="lbRank"></span><span class="mono" id="lbName"></span></div>
+    <div class="lb-ctl">
+      <button type="button" class="lb-btn" id="lbPrev" aria-label="Previous">&#8249;</button>
+      <button type="button" class="lb-btn" id="lbNext" aria-label="Next">&#8250;</button>
+      <button type="button" class="lb-btn" id="lbClose" aria-label="Close">&times;</button>
+    </div>
+  </div>
+  <div class="lb-body">
+    <figure class="lb-stage"><img id="lbImg" alt=""></figure>
+    <aside class="lb-side" id="lbSide"></aside>
+  </div>
+</div>
+
+<script src="/static/help.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

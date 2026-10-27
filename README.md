@@ -1,18 +1,57 @@
 # Wedding Photo Tools
 
-Two applications that choose photographs, sharing one quality-measurement core.
-Both run entirely on this machine: no API key, no cloud service, no per-image
+Applications that choose photographs, sharing one quality-measurement core.
+All run entirely on this machine: no API key, no cloud service, no per-image
 cost, and no photograph ever leaves the computer.
 
 | Application | Job | Status |
 |---|---|---|
-| `photo_shortlist` | Rank a batch best to worst, name each photo's faults, shortlist the best few | Working, 39 checks passing |
-| `wedding_album` | Organise a whole wedding into an album tree | Working, 55 checks passing |
+| **`photo_funnel`** | **The main app.** Review a shoot in twelve steps, narrowing to one photograph | v0.04, 48 checks |
+| `photo_shortlist` | Rank a batch, name each photo's faults; the engine the others build on | 81 checks |
+| `photo_studio` | Earlier three-step gallery UI on the same engine | superseded by the funnel |
+| `wedding_album` | Organise a whole wedding into an album tree | 55 checks |
 
-**Neither has ever been run on a real wedding photograph.** Every measurement
-quoted below came from synthetic test images with deliberate faults. That
-proves the code works; it does not prove the ranking matches a photographer's
-eye.
+Validated on a real 245-photo ceremony as well as synthetic test images.
+
+---
+
+## Photo Funnel
+
+```bash
+source .venv/bin/activate
+python3 -m photo_funnel            # opens http://127.0.0.1:8770/
+```
+
+Open a folder (or drop photos in), then walk the steps. Each one removes
+photos for a single stated reason, exposes its thresholds with an **i**
+popover explaining how to choose them, and shows exactly which frames it took.
+
+```
+ 1 Add          2 Straighten    3 Duplicates    4 Exposure
+ 5 Focus        6 Subject       7 Expressions   8 Grain
+ 9 Narrow      10 People       11 Per moment   12 The best
+```
+
+On a real 245-photo ceremony: 87 frames rotated upright, then
+245 -> 194 -> 166 -> 129 -> 107 -> 18 -> 17 -> 6 -> 1.
+
+- **Your originals are never modified.** Photos are copied into a working
+  directory first; rotation rewrites the copies only. Verified by comparing
+  file modification times and sizes before and after a full run.
+- **Measured once, decided instantly.** Photos are measured on entering step 3
+  and cached by path, modification time and size. Every slider after that
+  recomputes the whole funnel in about 5 ms.
+- **Nothing is lost.** Every step carries the rejected pile. Any frame can be
+  claimed into **Manually selected**, a separate set that never changes the
+  funnel's own result.
+- **Saving never overwrites.** Step 12 suggests a destination and folder name
+  (`BestImages_vN`, `Muhurtham_Selects`, ...), refuses a folder that exists,
+  and writes numbered selects, `Manually_Selected/`, optional rejects grouped
+  by step, optional 9:16 versions, notes and a ranking CSV.
+- **Deep links:** `http://127.0.0.1:8770/#5` opens step 5.
+
+**Step 7, Expressions, is not available.** Reading expressions and closed eyes
+needs two models that are not installed. The step passes everything through.
 
 ---
 

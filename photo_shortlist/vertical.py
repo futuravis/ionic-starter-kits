@@ -435,7 +435,14 @@ def convert(
             faces = []
         result.faces_found = len(faces)
 
-        y = _vertical_offset(ch, ph, faces, scale)
+        # Face boxes were measured on a copy capped at FACE_DETECT_MAX_DIM, not
+        # on the full-resolution source, so they need that scale undone before
+        # the placement scale is applied. Without this a face on a 6000px
+        # original lands roughly five times too high in the canvas.
+        longest = max(sw, sh)
+        detect_scale = (longest / config.FACE_DETECT_MAX_DIM
+                        if longest > config.FACE_DETECT_MAX_DIM else 1.0)
+        y = _vertical_offset(ch, ph, faces, scale * detect_scale)
         x = max(0, (cw - pw) // 2)
 
         canvas[y:y + ph, x:x + pw] = placed

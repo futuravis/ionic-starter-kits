@@ -30,4 +30,4 @@ network.
 
 # Repository release version. The three packages here ship together as one
 # artifact, so they carry one number rather than drifting apart.
-__version__ = "0.03"
+__version__ = "0.04"
