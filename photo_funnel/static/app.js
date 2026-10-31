@@ -604,23 +604,36 @@ function paintBrowse(d) {
   function label() {
     var n = rec.checked ? d.total : d.here;
     use.disabled = !n;
-    use.textContent = n ? "Use this folder \u2014 " + photosText(n, rec.checked && d.total_capped) : "No photos here";
+    use.textContent = n ? "Analyse " + photosText(Math.min(n, d.limit), rec.checked && d.total_capped && n <= d.limit) + " \u2192" : "No photos here";
     warn.hidden = n <= d.limit;
     warn.textContent = "Only the first " + d.limit + " photos are loaded per batch. Choose a smaller folder, such as one ceremony.";
   }
   var warn = mk("div", "warn"); warn.hidden = true;
   rec.addEventListener("change", label);
-  use.addEventListener("click", function () {
-    api("/api/import", { path: d.path, recursive: rec.checked }).then(waitJob)
-      .then(function (p) { toast(p.message, "good"); return refreshState(); })
-      .then(function () { App.funnel = null; render(); })
-      .catch(function (e) { toast(e.message, "bad"); });
-  });
+  use.addEventListener("click", function () { analyseFolder(d.path, rec.checked); });
   act.appendChild(use);
   foot.appendChild(act);
   box.appendChild(foot);
   box.appendChild(warn);
   label();
+}
+
+/* Choose a folder and get a result: find the photos, copy them in, straighten,
+   measure, run every step, then open the final step. Replaces the current
+   batch, so ask first if that would throw work away. */
+function analyseFolder(path, recursive) {
+  var have = App.state.files.length, picked = picks().length;
+  if (have && !confirm("This replaces the " + have + " photo" + (have === 1 ? "" : "s") + " currently loaded" +
+      (picked ? " and your " + picked + " manual selection" + (picked === 1 ? "" : "s") : "") + ". Continue?")) return;
+  App.funnel = null; App.saved = null; App.dests = null; App.dest.touched = false;
+  api("/api/analyse-folder", { path: path, recursive: recursive })
+    .then(waitJob)
+    .then(function (p) {
+      toast(p.message, "good");
+      return Promise.all([refreshState(), api("/api/funnel")]);
+    })
+    .then(function (r) { applyFunnel(r[1]); go(App.funnel ? 12 : 1); })
+    .catch(function (e) { toast(e.message, "bad"); refreshState().then(render); });
 }
 
 function upload(list) {

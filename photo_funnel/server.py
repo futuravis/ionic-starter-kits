@@ -86,6 +86,29 @@ class Session:
         if old and os.path.isdir(old):
             shutil.rmtree(old, ignore_errors=True)
 
+    def clear_batch(self) -> None:
+        """
+        Drop the current photos but keep the job state and the parameters.
+
+        Unlike reset(), this is safe to call from inside a running job: it
+        does not replace the lock or the progress fields the browser is
+        polling, and the user's slider settings carry over to the new folder.
+        """
+        with self.lock:
+            old = self.workdir
+            self.workdir = ""
+            self.files = []
+            self.source_dir = None
+            self.mixed_sources = False
+            self.angles = {}
+            self.straightened = False
+            self.cache = engine.Cache()
+            self.picks = []
+            self.result = None
+            self.last_export = None
+        if old and os.path.isdir(old):
+            shutil.rmtree(old, ignore_errors=True)
+
     def by_name(self, name: str) -> Optional[str]:
         with self.lock:
             for p in self.files:
@@ -265,6 +288,55 @@ def _job_import(folder: str, recursive: bool = True) -> None:
     if len(images) > len(taken):
         note += f" {len(images) - len(taken)} skipped: the batch limit is {MAX_FILES}."
     S.finish(message=note)
+
+
+def _job_analyse_folder(folder: str, recursive: bool) -> None:
+    """
+    The whole first half of the funnel in one go: find the photos in a folder,
+    copy them in, stand them upright, measure them, and run every step.
+
+    This replaces the current batch. Choosing a folder means "this is the
+    shoot", so mixing it with whatever was loaded before would be a surprise.
+    """
+    S.clear_batch()
+    pretty = export.pretty(folder)
+
+    S.step("finding photos", 0, 0)
+    images = _list_images(folder, recursive)
+    if not images:
+        where = " or its subfolders" if recursive else ""
+        hint = "" if recursive else " Try including subfolders."
+        S.finish(error=f"No photos found in {pretty}{where}.{hint}")
+        return
+
+    taken = images[:MAX_FILES]
+    for i, src in enumerate(taken, 1):
+        S.add_file(os.path.basename(src), lambda dst, s=src: shutil.copy2(s, dst))
+        S.step("copying photos", i, len(taken))
+    with S.lock:
+        S.source_dir = os.path.abspath(folder)
+        paths = list(S.files)
+        margin = float(S.params["straighten_margin"])
+
+    workers = pipeline.default_workers()
+    turned = engine.straighten(paths, margin, workers=workers, progress=S.step)
+    with S.lock:
+        for r in turned:
+            if r.changed:
+                S.angles[r.name] = (S.angles.get(r.name, 0) + r.angle) % 360
+        S.straightened = True
+
+    S.cache.scan(paths, workers=workers, progress=S.step)
+    S.step("running the funnel", 0, 0)
+    result = _recompute()
+
+    rotated = sum(1 for r in turned if r.changed)
+    note = f"Analysed {len(taken)} photo(s) from {pretty}: {rotated} rotated upright"
+    if result is not None:
+        note += f", {len(result.selects)} selected, best is {result.best}"
+    if len(images) > len(taken):
+        note += f". Only the first {MAX_FILES} of {len(images)} were loaded"
+    S.finish(message=note + ".")
 
 
 def _job_straighten(margin: float) -> None:
@@ -608,6 +680,15 @@ class Handler(BaseHTTPRequestHandler):
             if not _allowed(folder):
                 return self._error("Choose a folder inside your home folder or on an external drive.")
             return self._start("copying photos", _job_import, folder,
+                               bool(body.get("recursive", True)))
+
+        if route == "/api/analyse-folder":
+            folder = os.path.abspath(os.path.expanduser(str(body.get("path", "")).strip()))
+            if not os.path.isdir(folder):
+                return self._error(f"Folder not found: {export.pretty(folder)}")
+            if not _allowed(folder):
+                return self._error("Choose a folder inside your home folder or on an external drive.")
+            return self._start("finding photos", _job_analyse_folder, folder,
                                bool(body.get("recursive", True)))
 
         if route == "/api/reset":
