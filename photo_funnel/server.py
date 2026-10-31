@@ -265,6 +265,46 @@ def _browse(path: str) -> dict:
     }
 
 
+def _native_pick(start: str) -> dict:
+    """
+    Show the macOS Choose Folder dialog and return the chosen path.
+
+    This works only because the server runs on the same Mac as the browser;
+    a page cannot open a native folder dialog that reveals a real path. The
+    script calls `activate` so the dialog comes to the front rather than
+    hiding behind the browser, and it needs no automation permission because
+    it does not script any other application.
+    """
+    import subprocess
+    import sys
+
+    if sys.platform != "darwin":
+        return {"error": "The Finder folder dialog is only available on macOS."}
+
+    start = os.path.expanduser(start or "~/Desktop")
+    if not os.path.isdir(start):
+        start = os.path.expanduser("~")
+    script = (
+        'activate\n'
+        'POSIX path of (choose folder with prompt "Choose the folder of photos to analyse" '
+        'default location (POSIX file "%s"))' % start.replace('"', '\\"')
+    )
+    try:
+        proc = subprocess.run(["osascript", "-e", script], capture_output=True,
+                              text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        return {"cancelled": True}
+    if proc.returncode != 0:
+        # -128 is "User canceled"; anything else is a real failure.
+        if "-128" in proc.stderr or "canceled" in proc.stderr.lower():
+            return {"cancelled": True}
+        return {"error": proc.stderr.strip() or "The folder dialog could not be shown."}
+    path = proc.stdout.strip().rstrip("/") or "/"
+    if not _allowed(path):
+        return {"error": "Choose a folder inside your home folder or on an external drive."}
+    return {"path": path, "pretty": export.pretty(path)}
+
+
 def _list_images(folder: str, recursive: bool) -> List[str]:
     if recursive:
         return scanner.find_images(folder)
@@ -681,6 +721,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._error("Choose a folder inside your home folder or on an external drive.")
             return self._start("copying photos", _job_import, folder,
                                bool(body.get("recursive", True)))
+
+        if route == "/api/pick-folder":
+            result = _native_pick(str(body.get("start", "")))
+            if "error" in result:
+                return self._error(result["error"])
+            return self._json(result)
 
         if route == "/api/analyse-folder":
             folder = os.path.abspath(os.path.expanduser(str(body.get("path", "")).strip()))

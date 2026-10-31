@@ -311,3 +311,6 @@ h1{font-size:25px;font-weight:600;letter-spacing:-.025em;margin:0}
 .fb-act{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .fb-rec{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
 .fbrowse .warn{margin:0;border-radius:0;border-left:0;border-right:0;border-bottom:0}
+
+.pick-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.pick-row .faint{font-size:12.5px}

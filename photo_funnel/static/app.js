@@ -478,6 +478,13 @@ function renderAdd(stage) {
   stage.appendChild(drop); stage.appendChild(input);
 
   stage.appendChild(mk("div", "or", "or choose a folder"));
+  var pickRow = mk("div", "pick-row");
+  var pickBig = mk("button", "btn btn-p btn-big", "\uD83D\uDCC1  Choose folder\u2026"); pickBig.type = "button";
+  pickBig.addEventListener("click", chooseFolder);
+  pickRow.appendChild(pickBig);
+  pickRow.appendChild(mk("span", "faint", "Opens the Finder window. The photos in the folder you pick are found and analysed straight away."));
+  stage.appendChild(pickRow);
+  stage.appendChild(mk("div", "or", "or browse here"));
   var fb = mk("div", "fbrowse"); fb.id = "fbrowse";
   stage.appendChild(fb);
   browse(App.browsePath || "~/Desktop");
@@ -616,6 +623,21 @@ function paintBrowse(d) {
   box.appendChild(foot);
   box.appendChild(warn);
   label();
+}
+
+/* The Finder "Choose Folder" window, opened by the local server. The request
+   stays open while the dialog is up, which is why there is no busy overlay:
+   the dialog itself is the UI. */
+function chooseFolder() {
+  toast("Choose a folder in the Finder window\u2026");
+  api("/api/pick-folder", { start: App.browsePath || "~/Desktop" })
+    .then(function (r) {
+      if (r.cancelled) { toast(""); return; }
+      App.browsePath = r.path;
+      if (App.step === 1) browse(r.path);
+      analyseFolder(r.path, true);
+    })
+    .catch(function (e) { toast(e.message, "bad"); });
 }
 
 /* Choose a folder and get a result: find the photos, copy them in, straighten,
@@ -1111,6 +1133,7 @@ document.addEventListener("keydown", function (e) {
   if (e.key === "ArrowRight") stepLb(1);
 });
 $("picksChip").addEventListener("click", function () { if (App.funnel) go(12); });
+$("chooseTop").addEventListener("click", chooseFolder);
 
 /* ------------------------------------------------------------ start */
 refreshState().then(function (s) {
