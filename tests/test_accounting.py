@@ -18,10 +18,21 @@ from wedding_album import (
     batch, config, people, pipeline, quality, scanner, store,
 )
 
-ROOT = os.path.expanduser("~/Desktop/candid marriage")
+# This suite checks the real collection. Its location can be overridden, and
+# the suite skips rather than crashes when the photographs are not present.
+_CANDIDATES = [
+    os.environ.get("WEDDING_ROOT", ""),
+    "~/Desktop/Photo Analyzer/candid marriage",
+    "~/Desktop/candid marriage",
+]
+ROOT = next((os.path.expanduser(c) for c in _CANDIDATES
+             if c and os.path.isdir(os.path.expanduser(c))), "")
 
 
 def main() -> int:
+    if not ROOT:
+        print("skipped: real collection not found (set WEDDING_ROOT)")
+        return 0
     checks = []
 
     def check(ok, label, detail=""):
