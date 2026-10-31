@@ -26,8 +26,6 @@ import threading
 import traceback
 import webbrowser
 import zipfile
-from email.parser import BytesParser
-from email.policy import HTTP
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
@@ -37,6 +35,7 @@ import cv2
 from wedding_album import config, pipeline
 
 from . import __version__, metrics as measurement, shortlist
+from .web import parse_multipart
 
 
 HOST = "127.0.0.1"
@@ -476,29 +475,8 @@ def _ranking_csv() -> Optional[str]:
 # UPLOADS
 # ============================================================================
 
-def _parse_multipart(body: bytes, content_type: str) -> List[Tuple[str, bytes]]:
-    """
-    Pull (filename, data) pairs out of a multipart/form-data body.
-
-    Uses the stdlib email parser rather than `cgi`, which is deprecated and
-    removed in Python 3.13. The body is handed over with a synthesized header
-    block so the parser sees a well-formed MIME document.
-    """
-    header = f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n"
-    message = BytesParser(policy=HTTP).parsebytes(header.encode("latin-1") + body)
-
-    if not message.is_multipart():
-        return []
-
-    out: List[Tuple[str, bytes]] = []
-    for part in message.iter_parts():
-        filename = part.get_filename()
-        if not filename:
-            continue
-        payload = part.get_payload(decode=True)
-        if payload:
-            out.append((filename, payload))
-    return out
+# Kept under its old private name for photo_studio, which imports it.
+_parse_multipart = parse_multipart
 
 
 def _store_uploads(files: List[Tuple[str, bytes]]) -> Tuple[int, List[str]]:

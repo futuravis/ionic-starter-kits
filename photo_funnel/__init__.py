@@ -10,7 +10,7 @@ uses, and shows exactly which frames it took. Anything removed stays
 reachable, and can be claimed into a separate manual selection that never
 alters the funnel's own result.
 
-The design was agreed as mockups/funnel_v4.html before any of this was
+The design was agreed as docs/mockups/funnel_v4.html before any of this was
 written.
 
     python3 -m photo_funnel

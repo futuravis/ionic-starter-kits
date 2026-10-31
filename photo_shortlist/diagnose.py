@@ -30,8 +30,6 @@ from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 
-from wedding_album import config
-
 from .metrics import FaceReading, PhotoMetrics
 
 

@@ -246,6 +246,8 @@ python3 -m tests.test_overrides      #  8 checks - runtime config overrides
 python3 -m tests.test_priority       #          - config validation
 ```
 
+Run everything with `python3 -m tests.run_all`.
+
 **Do not trust `unittest discover` on this project.** It reports
 `Ran 0 tests - OK`, which looks like a pass but means nothing ran: these files
 are self-checking scripts rather than `unittest` classes. Run them by name.
@@ -320,7 +322,7 @@ wedding_album/          the full album tool
 tests/                  self-checking scripts, run by name
 tools/                  one-off diagnostics for tuning thresholds
 models/                 ONNX weights - NOT in git, must be downloaded
-image_curator.py        superseded standalone script, kept for reference
+legacy/image_curator.py superseded standalone script, kept for reference
 ```
 
 `photo_shortlist` reuses four files from `wedding_album` and modifies none of

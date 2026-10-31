@@ -70,7 +70,7 @@ def cmd_pick(args: argparse.Namespace) -> int:
         print(f"        {candidate.reason}")
 
     if not args.picks_only:
-        print(f"\n  EVERY PHOTO, BEST TO WORST")
+        print("\n  EVERY PHOTO, BEST TO WORST")
         print(f"    {'#':>3}  {'score':>5}  {'shot':>4}  photo")
         print(f"    {'-' * 3}  {'-' * 5}  {'-' * 4}  {'-' * 46}")
         for c in result.ranked:
@@ -79,7 +79,7 @@ def cmd_pick(args: argparse.Namespace) -> int:
                   f"{c.name:<28} {c.headline}")
 
         if result.issue_tally:
-            print(f"\n  WHAT IS WRONG ACROSS THE BATCH")
+            print("\n  WHAT IS WRONG ACROSS THE BATCH")
             for label, count in result.issue_tally.items():
                 print(f"    {count:>3} of {result.total:<3}  {label}")
 

@@ -321,7 +321,7 @@ def score(measured: Sequence[PhotoMetrics]) -> Dict[str, float]:
         config.apply_overrides(previous)
 
 
-def _breakdowns(usable: Sequence[PhotoMetrics]) -> List[Dict[str, float]]:
+def breakdowns(usable: Sequence[PhotoMetrics]) -> List[Dict[str, float]]:
     """Per-photo, per-metric 0-1 values, in the same order as `usable`."""
     columns: Dict[str, List[float]] = {}
     for name in DISPLAY_METRICS:
@@ -533,7 +533,7 @@ def run(
         progress("comparing shots", 0, len(usable))
 
     scores = score(measured)
-    breakdowns = _breakdowns(usable)
+    per_photo = breakdowns(usable)
     thresholds = Thresholds.from_batch(usable, list(readings.values()))
 
     candidates: List[Candidate] = []
@@ -547,7 +547,7 @@ def run(
             filepath=m.filepath,
             quality=measured_score,
             score=_penalized(measured_score, issues),
-            breakdown=breakdowns[i],
+            breakdown=per_photo[i],
             issues=issues,
             headline=diagnose.headline(issues, face_count),
             face_count=face_count,
@@ -602,3 +602,7 @@ def run(
         faces_probed=bool(readings),
         dropped=dropped,
     )
+
+
+# Old private name, kept so external callers do not break.
+_breakdowns = breakdowns

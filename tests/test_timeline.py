@@ -60,7 +60,7 @@ def main() -> int:
     hashes = {a.filepath: phash, b.filepath: phash}
     times = {a.filepath: a._taken, b.filepath: b._taken}
     groups = selection.group_shots([a, b], hashes, times=times)
-    check(len(groups) == 1, f"one group for a burst", f"got {len(groups)}")
+    check(len(groups) == 1, "one group for a burst", f"got {len(groups)}")
 
     print("\nidentical-looking photos hours apart become separate groups")
     # THE case: same appearance, 2 hours apart. Portraits vs on stage.

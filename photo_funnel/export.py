@@ -200,7 +200,7 @@ def _notes(result: FunnelResult, picks: Sequence[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _csv(result: FunnelResult, picks: Sequence[str]) -> str:
+def ranking_csv(result: FunnelResult, picks: Sequence[str]) -> str:
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["rank", "photo", "score", "select", "manual_pick", "faces", "band",
@@ -281,7 +281,7 @@ def write(result: FunnelResult, picks: Sequence[str], base: str, name: str,
             fh.write(_notes(result, picks))
     if inc["csv"]:
         with open(os.path.join(target, "ranking.csv"), "w", encoding="utf-8", newline="") as fh:
-            fh.write(_csv(result, picks))
+            fh.write(ranking_csv(result, picks))
     done = total
     tick("done")
 

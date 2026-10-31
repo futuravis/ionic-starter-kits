@@ -16,7 +16,7 @@ Two things live here that `wedding_album.quality` does not provide.
    blur sensitivity untouched, because for a blurred photo the full scale is
    already the minimum.
 
-   Three other fixes were tried first and all failed; see STORY.md before
+   Three other fixes were tried first and all failed; see docs/STORY.md before
    reaching for a simpler one.
 
 2. Face probing. Enough to answer "is there a face, is it big enough, is it

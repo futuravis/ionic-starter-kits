@@ -7,7 +7,7 @@ resulting album, since the UI and the CLI must not disagree.
 
 Run with the server already up:
     python3 -m wedding_album serve --no-browser &
-    python3 -m tests.drive_api
+    python3 -m tools.drive_api
 """
 
 from __future__ import annotations

@@ -17,7 +17,6 @@ Read-only. Nothing is renamed.
 from __future__ import annotations
 
 import os
-import statistics
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple

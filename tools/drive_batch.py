@@ -9,7 +9,7 @@ Writing is skipped by default because copying a gigabyte through iCloud takes
 minutes. Pass --write to include it.
 
     python3 -m wedding_album serve --no-browser &
-    python3 -m tests.drive_batch
+    python3 -m tools.drive_batch
 """
 
 from __future__ import annotations

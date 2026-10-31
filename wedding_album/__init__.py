@@ -21,5 +21,5 @@ priority order that resolves photos containing several kinds of people.
 
 # Repository release version. This package reached 1.2.0 on its own before the
 # two photo apps were built alongside it; all three now ship together as one
-# artifact and carry one number. The earlier history is in STORY.md.
+# artifact and carry one number. The earlier history is in docs/STORY.md.
 __version__ = "0.04"

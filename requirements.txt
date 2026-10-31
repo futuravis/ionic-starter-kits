@@ -36,7 +36,7 @@ opencv-python==5.0.0.93
 
 numpy==2.0.2
 
-# --- only used by the legacy standalone image_curator.py -------------------
+# --- only used by the legacy standalone legacy/image_curator.py -------------------
 # That script predates both packages, scores on technical quality alone, and
 # its Haar-cascade face step is broken on OpenCV 5. Kept for reference only;
 # nothing in wedding_album or photo_shortlist imports it.

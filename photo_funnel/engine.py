@@ -39,7 +39,7 @@ from wedding_album import config, quality
 from wedding_album.quality import phash_distance
 
 from photo_shortlist import metrics as measurement
-from photo_shortlist import shortlist, vertical
+from photo_shortlist import diagnose, shortlist, vertical
 from photo_shortlist.metrics import FaceInfo, FaceReading, PhotoMetrics
 
 
@@ -603,7 +603,7 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
             measured = quality.score_collection([r.metrics for r in usable])
         finally:
             config.apply_overrides(prev)
-        breakdowns = shortlist._breakdowns([r.metrics for r in usable])
+        breakdowns = shortlist.breakdowns([r.metrics for r in usable])
     else:
         measured, breakdowns = {}, []
 
@@ -626,7 +626,7 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
         "slight": _percentile(sharp, p["focus_slight"]),
         "grain": _percentile(noise, p["grain_pct"]),
         "noise_median": float(np.median(noise)) if noise else 0.0,
-        "face_soft": _percentile(face_sharp, diag_face_percentile()),
+        "face_soft": _percentile(face_sharp, float(diagnose.FACE_SOFT_PERCENTILE)),
     }
 
     for st in all_states:
@@ -794,8 +794,3 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
         faces_probed=faces_probed, total=len(all_states),
     )
 
-
-def diag_face_percentile() -> float:
-    """The face-sharpness percentile shared with photo_shortlist.diagnose."""
-    from photo_shortlist import diagnose
-    return float(diagnose.FACE_SOFT_PERCENTILE)
