@@ -477,19 +477,10 @@ function renderAdd(stage) {
   input.addEventListener("change", function () { upload(input.files); input.value = ""; });
   stage.appendChild(drop); stage.appendChild(input);
 
-  stage.appendChild(mk("div", "or", "or open a folder"));
-  var fr = mk("div", "folder-row");
-  var path = mk("input", "txt"); path.placeholder = App.state.home_desktop + "/\u2026"; path.spellcheck = false;
-  path.setAttribute("aria-label", "Folder path");
-  var open = mk("button", "btn", "Open folder"); open.type = "button";
-  open.addEventListener("click", function () {
-    if (!path.value.trim()) { toast("Type or paste a folder path.", "bad"); return; }
-    api("/api/import", { path: path.value }).then(waitJob).then(function (p) { toast(p.message, "good"); return refreshState(); })
-      .then(function () { App.funnel = null; render(); }).catch(function (e) { toast(e.message, "bad"); });
-  });
-  path.addEventListener("keydown", function (e) { if (e.key === "Enter") open.click(); });
-  fr.appendChild(path); fr.appendChild(open);
-  stage.appendChild(fr);
+  stage.appendChild(mk("div", "or", "or choose a folder"));
+  var fb = mk("div", "fbrowse"); fb.id = "fbrowse";
+  stage.appendChild(fb);
+  browse(App.browsePath || "~/Desktop");
 
   var files = App.state.files;
   if (files.length) {
@@ -514,6 +505,124 @@ function renderAdd(stage) {
   nav.appendChild(clear); nav.appendChild(next);
   stage.appendChild(nav);
 }
+/* ---- folder browser ----
+   Lists folders on this machine through the server, which only answers for
+   the home folder and external drives. Nothing is uploaded: choosing a
+   folder copies its photos into the working area on the server side. */
+function photosText(n, capped) { return (capped ? n + "+" : n) + (n === 1 ? " photo" : " photos"); }
+
+function browse(path) {
+  var box = $("fbrowse"); if (!box) return;
+  api("/api/browse?path=" + enc(path)).then(function (d) {
+    App.browsePath = d.path;
+    paintBrowse(d);
+  }).catch(function (e) {
+    if (path !== "~") { toast(e.message, "bad"); browse(App.browsePath && App.browsePath !== path ? App.browsePath : "~"); }
+    else toast(e.message, "bad");
+  });
+}
+
+function paintBrowse(d) {
+  var box = $("fbrowse"); box.innerHTML = "";
+
+  /* top: shortcuts + typed path */
+  var top = mk("div", "fb-top");
+  var sc = mk("div", "fb-short");
+  d.shortcuts.forEach(function (s) {
+    var b = mk("button", "chip" + (d.path === s.path ? " on" : ""), s.label); b.type = "button";
+    b.addEventListener("click", function () { browse(s.path); });
+    sc.appendChild(b);
+  });
+  top.appendChild(sc);
+  var go = mk("div", "folder-row");
+  var input = mk("input", "txt"); input.value = d.pretty; input.spellcheck = false;
+  input.setAttribute("aria-label", "Folder path");
+  var gb = mk("button", "btn", "Go"); gb.type = "button";
+  gb.addEventListener("click", function () { browse(input.value); });
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") browse(input.value); });
+  go.appendChild(input); go.appendChild(gb);
+  top.appendChild(go);
+  box.appendChild(top);
+
+  /* breadcrumb */
+  var crumb = mk("div", "fb-crumb");
+  if (d.parent) {
+    var up = mk("button", "fb-up", "\u2191 Up"); up.type = "button";
+    up.addEventListener("click", function () { browse(d.parent); });
+    crumb.appendChild(up);
+  }
+  var parts = d.pretty.split("/").filter(Boolean), acc = d.pretty.charAt(0) === "~" ? "" : "/";
+  parts.forEach(function (part, i) {
+    acc += (i === 0 && part === "~") ? "~" : (acc && acc !== "/" ? "/" : "") + part;
+    var target = acc;
+    var b = mk("button", "fb-seg" + (i === parts.length - 1 ? " cur" : ""), part); b.type = "button";
+    b.addEventListener("click", function () { browse(target); });
+    if (i) crumb.appendChild(mk("span", "fb-sep", "/"));
+    crumb.appendChild(b);
+  });
+  box.appendChild(crumb);
+
+  /* subfolders */
+  var list = mk("div", "fb-list");
+  if (!d.folders.length) list.appendChild(mk("div", "fb-none", "No folders inside."));
+  d.folders.forEach(function (f) {
+    var row = mk("button", "fb-row" + (f.photos ? "" : " empty")); row.type = "button";
+    row.appendChild(mk("span", "fb-ico", "\uD83D\uDCC1"));
+    row.appendChild(mk("span", "fb-name", f.name));
+    var meta = [photosText(f.photos, f.capped)];
+    if (f.folders) meta.push(f.folders + (f.folders === 1 ? " folder" : " folders"));
+    row.appendChild(mk("span", "fb-meta", meta.join(" \u00b7 ")));
+    row.appendChild(mk("span", "fb-go", "\u203A"));
+    row.addEventListener("click", function () { browse(f.path); });
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+
+  /* this folder: preview + choose */
+  var foot = mk("div", "fb-foot");
+  var info = mk("div", "fb-info");
+  info.appendChild(mk("div", "fb-here", d.pretty));
+  var hasSubPhotos = d.total > d.here;
+  info.appendChild(mk("div", "faint",
+    photosText(d.here) + " directly here" + (hasSubPhotos ? " \u00b7 " + photosText(d.total, d.total_capped) + " including subfolders" : "")));
+  if (d.sample.length) {
+    var strip = mk("div", "fb-sample");
+    d.sample.forEach(function (n) {
+      var t = mk("span", "fb-file", n); strip.appendChild(t);
+    });
+    info.appendChild(strip);
+  }
+  foot.appendChild(info);
+
+  var act = mk("div", "fb-act");
+  var lab = mk("label", "fb-rec");
+  var rec = mk("input", "ck"); rec.type = "checkbox"; rec.checked = hasSubPhotos || !d.here; rec.disabled = !hasSubPhotos;
+  lab.appendChild(rec); lab.appendChild(document.createTextNode(" Include subfolders"));
+  act.appendChild(lab);
+
+  var use = mk("button", "btn btn-p", ""); use.type = "button";
+  function label() {
+    var n = rec.checked ? d.total : d.here;
+    use.disabled = !n;
+    use.textContent = n ? "Use this folder \u2014 " + photosText(n, rec.checked && d.total_capped) : "No photos here";
+    warn.hidden = n <= d.limit;
+    warn.textContent = "Only the first " + d.limit + " photos are loaded per batch. Choose a smaller folder, such as one ceremony.";
+  }
+  var warn = mk("div", "warn"); warn.hidden = true;
+  rec.addEventListener("change", label);
+  use.addEventListener("click", function () {
+    api("/api/import", { path: d.path, recursive: rec.checked }).then(waitJob)
+      .then(function (p) { toast(p.message, "good"); return refreshState(); })
+      .then(function () { App.funnel = null; render(); })
+      .catch(function (e) { toast(e.message, "bad"); });
+  });
+  act.appendChild(use);
+  foot.appendChild(act);
+  box.appendChild(foot);
+  box.appendChild(warn);
+  label();
+}
+
 function upload(list) {
   var files = Array.prototype.slice.call(list || []);
   if (!files.length) return;

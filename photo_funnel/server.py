@@ -20,7 +20,7 @@ import threading
 import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import cv2
@@ -152,8 +152,105 @@ def _background(fn, *args) -> None:
 # JOBS
 # ============================================================================
 
-def _job_import(folder: str) -> None:
-    images = scanner.find_images(folder)
+# ============================================================================
+# FOLDER BROWSER
+# ============================================================================
+
+# Browsing is confined to the user's home and mounted drives. The server only
+# listens on 127.0.0.1, but there is still no reason to let a page walk /etc.
+BROWSE_ROOTS = [os.path.expanduser("~"), "/Volumes"]
+
+# Folders under home that never hold a photographer's shoot and are slow or
+# protected to list.
+_BROWSE_HIDE = {"library", "applications", "node_modules", ".trash"}
+
+# Counting photos inside a subtree stops here, so a huge folder cannot stall
+# the listing. Counts at the cap are shown as "N+".
+_COUNT_CAP = 5000
+
+
+def _allowed(path: str) -> bool:
+    real = os.path.realpath(path)
+    return any(real == r or real.startswith(r.rstrip(os.sep) + os.sep)
+               for r in map(os.path.realpath, BROWSE_ROOTS))
+
+
+def _is_image(name: str) -> bool:
+    return (not name.startswith(".")
+            and os.path.splitext(name)[1].lower() in config.IMAGE_EXTENSIONS)
+
+
+def _visible_dir(entry: os.DirEntry) -> bool:
+    name = entry.name
+    return (not name.startswith(".") and name.lower() not in _BROWSE_HIDE
+            and not scanner._excluded(name) and entry.is_dir(follow_symlinks=False))
+
+
+def _count_tree(path: str) -> Tuple[int, bool]:
+    """Photos in `path` and below, using the same skip rules as import."""
+    total = 0
+    for root, dirs, files in os.walk(path):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and not scanner._excluded(d)]
+        total += sum(1 for f in files if _is_image(f))
+        if total >= _COUNT_CAP:
+            return total, True
+    return total, False
+
+
+def _browse(path: str) -> dict:
+    """One folder: its subfolders with photo counts, and its own photos."""
+    path = os.path.abspath(os.path.expanduser(path or "~"))
+    if not os.path.isdir(path):
+        raise FileNotFoundError(f"Folder not found: {export.pretty(path)}")
+    if not _allowed(path):
+        raise PermissionError("Browsing is limited to your home folder and external drives.")
+
+    try:
+        entries = sorted(os.scandir(path), key=lambda e: e.name.lower())
+    except PermissionError:
+        raise PermissionError(f"macOS did not allow reading {export.pretty(path)}.")
+
+    here = [e.name for e in entries if e.is_file() and _is_image(e.name)]
+    folders = []
+    for e in entries:
+        try:
+            if not _visible_dir(e):
+                continue
+            n, capped = _count_tree(e.path)
+            subs = sum(1 for c in os.scandir(e.path) if _visible_dir(c))
+        except (PermissionError, OSError):
+            continue
+        folders.append({"name": e.name, "path": e.path, "photos": n,
+                        "capped": capped, "folders": subs})
+
+    total, capped = _count_tree(path)
+    parent = os.path.dirname(path)
+    shortcuts = [{"label": label, "path": p} for label, p in (
+        ("Home", os.path.expanduser("~")),
+        ("Desktop", os.path.expanduser("~/Desktop")),
+        ("Pictures", os.path.expanduser("~/Pictures")),
+        ("Drives", "/Volumes"),
+    ) if os.path.isdir(p)]
+
+    return {
+        "path": path, "pretty": export.pretty(path),
+        "parent": parent if parent != path and _allowed(parent) else None,
+        "here": len(here), "sample": here[:6],
+        "total": total, "total_capped": capped,
+        "folders": folders, "shortcuts": shortcuts,
+        "limit": MAX_FILES,
+    }
+
+
+def _list_images(folder: str, recursive: bool) -> List[str]:
+    if recursive:
+        return scanner.find_images(folder)
+    return sorted(os.path.join(folder, n) for n in os.listdir(folder)
+                  if _is_image(n) and os.path.isfile(os.path.join(folder, n)))
+
+
+def _job_import(folder: str, recursive: bool = True) -> None:
+    images = _list_images(folder, recursive)
     room = MAX_FILES - len(S.files)
     taken = images[:max(0, room)]
     for i, src in enumerate(taken, 1):
@@ -465,6 +562,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(_funnel_payload())
         if route == "/api/destinations":
             return self._json(_destinations_payload())
+        if route == "/api/browse":
+            try:
+                return self._json(_browse(q.get("path", ["~"])[0]))
+            except (FileNotFoundError, PermissionError) as exc:
+                return self._error(str(exc))
         if route in ("/api/thumb", "/api/photo"):
             path = _safe(q.get("p", [""])[0])
             if path is None:
@@ -503,7 +605,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._error(f"Folder not found: {export.pretty(folder)}")
             if os.path.realpath(folder).startswith(os.path.realpath(S.ensure_workdir())):
                 return self._error("That is the working directory.")
-            return self._start("copying photos", _job_import, folder)
+            if not _allowed(folder):
+                return self._error("Choose a folder inside your home folder or on an external drive.")
+            return self._start("copying photos", _job_import, folder,
+                               bool(body.get("recursive", True)))
 
         if route == "/api/reset":
             if S.progress()["running"]:
