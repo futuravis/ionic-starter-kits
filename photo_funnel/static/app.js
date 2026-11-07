@@ -251,6 +251,29 @@ function togglePick(name) {
     if (!$("lightbox").hidden) showLb();
   }).catch(function (e) { toast(e.message, "bad"); });
 }
+function swapBtn(name, isKeeper) {
+  // On a removed frame: keep it instead. On a user-chosen keeper: hand the
+  // choice back to the engine.
+  var b = mk("button", "swap" + (isKeeper ? " undo" : ""),
+    isKeeper ? "\u21ba Let the engine choose" : "\u21c4 Keep this one instead");
+  b.type = "button";
+  b.addEventListener("click", function (e) {
+    e.stopPropagation();
+    swap(name, isKeeper);
+  });
+  return b;
+}
+function swap(name, auto) {
+  // Swapping re-runs the funnel, so the whole result changes; refresh it all
+  // through the same path the normal funnel load uses.
+  api("/api/swap", { name: name, auto: !!auto }).then(function (d) {
+    if (!d || d.ready === false) return;
+    applyFunnel(d);
+    renderDynamic();
+    if (!$("lightbox").hidden) showLb();
+    toast(auto ? "Keeper handed back to the engine" : "Swapped \u2014 your frame is kept", "ok");
+  }).catch(function (e) { toast(e.message, "bad"); });
+}
 function card(name, opt) {
   opt = opt || {};
   var p = App.by[name];
@@ -904,15 +927,25 @@ function dynPairs(dyn) {
   var box = mk("div", "pairs");
   var shown = App.expanded.pairs ? pairs : pairs.slice(0, 20);
   shown.forEach(function (pr) {
-    var row = mk("div", "pair");
+    var row = mk("div", "pair" + (pr.overridden ? " swapped" : ""));
     var all = [pr.keeper].concat(pr.removed.map(function (r) { return r.name; }));
     function mini(name, keep, note) {
       var m = mk("div", "mini " + (keep ? "keep" : "gone"));
       var img = mk("img"); img.loading = "lazy"; img.alt = name; img.src = thumb(name, 240);
       img.addEventListener("click", function () { openLb(all, name); });
       m.appendChild(img);
+      if (keep) m.appendChild(mk("span", "keeptag", pr.overridden ? "your pick" : "kept"));
       m.appendChild(mk("div", "c", (keep ? "kept \u00b7 " : "") + note));
-      if (!keep) m.appendChild(pickBtn(name));
+      if (keep) {
+        // The chosen survivor. If it was your pick (not the engine's), offer
+        // to hand the choice back to the engine.
+        if (pr.overridden) m.appendChild(swapBtn(name, true));
+      } else {
+        // A removed near-duplicate: swap it in to keep it instead, or pick
+        // it as an extra alongside the keeper.
+        m.appendChild(swapBtn(name, false));
+        m.appendChild(pickBtn(name));
+      }
       return m;
     }
     row.appendChild(mini(pr.keeper, true, App.by[pr.keeper].score));

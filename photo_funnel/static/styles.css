@@ -179,6 +179,15 @@ h1{font-size:29.5px;font-weight:600;letter-spacing:-.025em;margin:0}
 .mini.keep img{outline:2px solid var(--clean);outline-offset:-2px}
 .mini.gone img{opacity:.5}
 .mini .c{font:13px var(--mono);color:var(--ink-faint);margin-top:4px;word-break:break-all}
+/* ---- swap (choose which near-duplicate survives) ---- */
+.mini{position:relative}
+.keeptag{position:absolute;top:6px;left:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:var(--clean);color:#fff}
+.pair.swapped .keeptag{background:var(--accent)}
+.pair.swapped{outline:2px solid var(--accent);outline-offset:-1px}
+.swap{margin-top:8px;width:100%;font-size:13px;font-weight:650;padding:6px 10px;border-radius:99px;border:1px solid var(--rule-s);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.swap:hover{border-color:var(--accent);color:var(--accent)}
+.swap.undo{color:var(--ink-faint)}
+.swap.undo:hover{border-color:var(--ink-soft);color:var(--ink-soft)}
 
 /* ---------- bands ---------- */
 .bandrow{display:grid;grid-template-columns:22px 1fr 86px 210px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--rule)}

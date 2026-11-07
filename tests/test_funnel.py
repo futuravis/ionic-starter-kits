@@ -189,6 +189,76 @@ def check_purity(cache, paths) -> None:
     ok("same inputs, same selects", a.selects == b.selects)
 
 
+def check_swap() -> None:
+    """
+    The duplicate "swap": the user may override which frame of a look-alike
+    group survives. By default the engine keeps the strongest; a dup_keepers
+    entry hands the choice to the user without disturbing anything else.
+    """
+    print("\nswap: choosing which near-duplicate survives")
+    import cv2
+    import numpy as np
+    from tests.test_shortlist import scene
+
+    with tempfile.TemporaryDirectory(prefix="funnel_swap_") as d:
+        def save(name, img):
+            cv2.imwrite(os.path.join(d, name), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+
+        # Two frames of the SAME scene: one crisp, one slightly soft. They are
+        # near-identical (one duplicate group); the crisp one scores higher so
+        # it is the engine's automatic keeper.
+        base = scene(1)
+        save("sharp.jpg", base)
+        save("soft.jpg", cv2.GaussianBlur(base, (7, 7), 0))
+        # A couple of unrelated frames so the batch is not all one group.
+        save("other2.jpg", scene(2))
+        save("other3.jpg", scene(3))
+
+        cache, paths = scan(d)
+        # A generous threshold so the two frames of scene(1) cluster together.
+        params = {"dup_threshold": 120}
+
+        auto = engine.run_funnel(cache.ordered(paths), params, faces_probed=False)
+        grp = next((pr for pr in auto.pairs
+                    if {"sharp.jpg", "soft.jpg"} <=
+                    set([pr["keeper"]] + [r["name"] for r in pr["removed"]])), None)
+        ok("the two frames form one duplicate group", grp is not None)
+        if grp is None:
+            return
+        ok("the engine keeps the sharper frame by default", grp["keeper"] == "sharp.jpg", grp["keeper"])
+        ok("the default keep is not flagged as a user override", grp.get("overridden") is False)
+        ok("the sharp frame survives to the end",
+           auto.states["sharp.jpg"].removed_by is None)
+        ok("the soft frame is removed at the duplicate step (3)",
+           auto.states["soft.jpg"].removed_by == 3)
+
+        # Swap: tell the engine to keep the soft frame instead. Every member of
+        # the group is mapped to the choice, which is what the server stores.
+        over = engine.run_funnel(cache.ordered(paths), params, faces_probed=False,
+                                 dup_keepers={"sharp.jpg": "soft.jpg", "soft.jpg": "soft.jpg"})
+        grp2 = next((pr for pr in over.pairs
+                     if {"sharp.jpg", "soft.jpg"} <=
+                     set([pr["keeper"]] + [r["name"] for r in pr["removed"]])), None)
+        ok("after the swap the chosen frame is the keeper", grp2 and grp2["keeper"] == "soft.jpg",
+           grp2["keeper"] if grp2 else "no group")
+        ok("the swap is flagged as a user override", bool(grp2) and grp2.get("overridden") is True)
+        # The chosen frame survives the duplicate step; it may still fail a
+        # later quality check (the soft frame is, after all, soft).
+        ok("the swapped-in frame is no longer dropped as a duplicate",
+           over.states["soft.jpg"].removed_by != 3)
+        ok("the former keeper is now removed at the duplicate step",
+           over.states["sharp.jpg"].removed_by == 3)
+
+        # An override that names a frame outside the group is ignored.
+        stray = engine.run_funnel(cache.ordered(paths), params, faces_probed=False,
+                                  dup_keepers={"sharp.jpg": "other2.jpg"})
+        grp3 = next((pr for pr in stray.pairs
+                     if {"sharp.jpg", "soft.jpg"} <=
+                     set([pr["keeper"]] + [r["name"] for r in pr["removed"]])), None)
+        ok("an override pointing outside the group is ignored",
+           bool(grp3) and grp3["keeper"] == "sharp.jpg" and grp3.get("overridden") is False)
+
+
 def check_params() -> None:
     print("\nparameters")
     p = engine.normalize({"dup_threshold": "9999", "focus_soft": "abc", "unknown": 1,
@@ -265,6 +335,7 @@ def main() -> int:
         check_people(cache, paths)
         check_want_and_people(cache, paths)
         check_purity(cache, paths)
+        check_swap()
         check_params()
         check_export(cache, paths)
         check_cache(d, paths)

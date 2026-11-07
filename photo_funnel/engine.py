@@ -603,16 +603,24 @@ class FunnelResult:
 
 def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
                faces_probed: bool = True,
-               identities: Optional[Dict[str, List[str]]] = None) -> FunnelResult:
+               identities: Optional[Dict[str, List[str]]] = None,
+               dup_keepers: Optional[Dict[str, str]] = None) -> FunnelResult:
     """
     Decide, step by step, which photographs survive. Pure; never touches disk.
 
     `identities` maps a photo's file name to the person ids recognised in it.
     It is measurement, like everything else in `records`; the user's choice
     of whom to keep arrives as the `people_sel` parameter.
+
+    `dup_keepers` maps a photo's file name to the file name the user chose to
+    keep for that photo's duplicate group. It is the "swap" override: within a
+    cluster of near-identical frames the engine would keep the strongest, but
+    the user may pick a different frame to survive instead. An entry whose
+    target is not actually in the same cluster is ignored.
     """
     p = normalize(params)
     identities = identities or {}
+    dup_keepers = dup_keepers or {}
     want = int(p["want"])
     usable = [r for r in records if r.metrics.ok]
     failures = [{"name": r.name, "error": r.metrics.error}
@@ -689,6 +697,18 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
             keeper = max(g, key=lambda s: ((s.main.sharpness if s.main else -1.0), s.score))
         else:
             keeper = max(g, key=lambda s: s.score)
+
+        # Swap override: if the user chose a specific frame in this cluster to
+        # survive, honour it over the score-based keeper. Any member's name may
+        # carry the choice; we take the chosen frame if it is in this group.
+        by_name = {s.name: s for s in g}
+        chosen_name = next((dup_keepers[s.name] for s in g
+                            if dup_keepers.get(s.name) in by_name), None)
+        overridden = False
+        if chosen_name and by_name[chosen_name] is not keeper:
+            keeper = by_name[chosen_name]
+            overridden = True
+
         lost = []
         for s in g:
             if s is keeper:
@@ -696,7 +716,8 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
             d = phash_distance(s.record.metrics.phash, keeper.record.metrics.phash)
             victims.append((s, f"near-duplicate of {keeper.name}, distance {d} of 256"))
             lost.append({"name": s.name, "distance": d})
-        pairs.append({"keeper": keeper.name, "removed": lost})
+        pairs.append({"keeper": keeper.name, "removed": lost,
+                      "overridden": overridden})
     remove(3, victims)
 
     # --- 4, 5, 6 faults; 7 expressions; 8 grain -----------------------------

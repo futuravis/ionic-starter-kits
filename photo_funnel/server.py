@@ -62,6 +62,10 @@ class Session:
         self.cache = engine.Cache()
         self.params: Dict[str, object] = dict(engine.DEFAULTS)
         self.picks: List[str] = []
+        # Duplicate-group "swap" overrides: photo name -> chosen keeper name.
+        # Every member of a group is mapped to the chosen frame so the choice
+        # survives even if the group's membership shifts between runs.
+        self.dup_keepers: Dict[str, str] = {}
         self.result: Optional[engine.FunnelResult] = None
         self.last_export: Optional[dict] = None
         # who is in which photo: filled by _identify()
@@ -108,6 +112,7 @@ class Session:
             self.straightened = False
             self.cache = engine.Cache()
             self.picks = []
+            self.dup_keepers = {}
             self.result = None
             self.last_export = None
             self.persons, self.identities, self.faces_of = [], {}, {}
@@ -488,7 +493,8 @@ def _recompute() -> Optional[engine.FunnelResult]:
             S.result = None
             return None
         S.result = engine.run_funnel(records, S.params, S.cache.faces_probed,
-                                     identities=S.identities)
+                                     identities=S.identities,
+                                     dup_keepers=S.dup_keepers)
         return S.result
 
 
@@ -901,6 +907,36 @@ class Handler(BaseHTTPRequestHandler):
                     S.picks = [n for n in S.picks if n != name]
                 picks = list(S.picks)
             return self._json({"picks": picks})
+
+        if route == "/api/swap":
+            # Choose which frame survives a duplicate group. `name` is the
+            # frame the user wants to keep; the group it belongs to is found
+            # from the current result's pairs. Passing `auto: true` clears any
+            # override for that group and restores the score-based keeper.
+            name = str(body.get("name", ""))
+            auto = bool(body.get("auto", False))
+            with S.lock:
+                if S.result is None or name not in S.result.states:
+                    return self._error("no such photo")
+                # Build the group (keeper + its removed frames) that contains
+                # the named photo, from the pairs the engine reported.
+                group: Optional[List[str]] = None
+                for pr in S.result.pairs:
+                    members = [pr["keeper"]] + [r["name"] for r in pr["removed"]]
+                    if name in members:
+                        group = members
+                        break
+                if group is None:
+                    return self._error(
+                        "This photo is not part of a duplicate group.")
+                if auto:
+                    for member in group:
+                        S.dup_keepers.pop(member, None)
+                else:
+                    for member in group:
+                        S.dup_keepers[member] = name
+            _recompute()
+            return self._json(_funnel_payload())
 
         if route == "/api/export":
             if S.result is None:
