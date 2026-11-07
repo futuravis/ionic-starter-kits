@@ -99,6 +99,7 @@ function picks() { return App.funnel ? App.funnel.picks : (App.state ? App.state
 function isPicked(name) { return picks().indexOf(name) >= 0; }
 function P(key) {
   if (App.funnel && key in App.funnel.params) return App.funnel.params[key];
+  if (App.state && App.state.params && key in App.state.params) return App.state.params[key];
   return App.state ? App.state.defaults[key] : null;
 }
 
@@ -329,7 +330,12 @@ function setParam(key, value) {
 function flushParams() {
   var body = { params: pending }; pending = {};
   return api("/api/params", body).then(function (f) {
-    applyFunnel(f); renderDynamic(); paintRail();
+    if (!f.ready) {                      /* saved before any analysis */
+      if (f.params) App.state.params = f.params;
+      paintWant();
+      return;
+    }
+    applyFunnel(f); renderDynamic(); paintRail(); paintWant();
   }).catch(function (e) {
     if (e.data && e.data.scan_needed) { App.state.scan_needed = true; go(App.step); }
     else toast(e.message, "bad");
@@ -419,6 +425,96 @@ function paintHits(n) {
   });
 }
 
+/* ------------------------------------------------------------ best-photo count */
+function wantControl() {
+  var w = mk("div", "want"); w.dataset.want = "1";
+  w.appendChild(mk("span", "want-l", "Best photos"));
+  var minus = mk("button", "want-b", "\u2212"); minus.type = "button"; minus.setAttribute("aria-label", "Fewer");
+  var val = mk("input", "want-v"); val.type = "number"; val.min = 1; val.max = 300; val.setAttribute("aria-label", "How many best photos");
+  var plus = mk("button", "want-b", "+"); plus.type = "button"; plus.setAttribute("aria-label", "More");
+  function set(n) {
+    n = Math.max(1, Math.min(300, Math.round(n) || 1));
+    val.value = n; setParam("want", n);
+  }
+  minus.addEventListener("click", function () { set(Number(val.value) - 1); });
+  plus.addEventListener("click", function () { set(Number(val.value) + 1); });
+  val.addEventListener("change", function () { set(Number(val.value)); });
+  w.appendChild(minus); w.appendChild(val); w.appendChild(plus);
+  val.value = P("want");
+  return w;
+}
+function paintWant() {
+  document.querySelectorAll("[data-want] .want-v").forEach(function (v) {
+    if (document.activeElement !== v) v.value = P("want");
+  });
+}
+
+/* ------------------------------------------------------------ people chooser */
+function persons() { return App.funnel ? (App.funnel.persons || []) : []; }
+function chosenPeople() { return (P("people_sel") || []).slice(); }
+function personLabel(id) {
+  var p = persons().filter(function (x) { return x.id === id; })[0];
+  return p ? p.label : id;
+}
+function faceUrl(person) {
+  if (!person.face || !person.face.box) return "";
+  var f = fileInfo(person.face.p);
+  return "/api/face?p=" + enc(person.face.p) + "&box=" + person.face.box.join(",") + "&v=" + (f ? f.v : "");
+}
+function setPeople(ids) { App.funnel.params.people_sel = ids; setParam("people_sel", ids); }
+
+function peoplePicker() {
+  var box = mk("div", "params");
+  var h = mk("div", "params-h");
+  h.appendChild(mk("h3", null, "Whose photos"));
+  h.appendChild(infoBtn("Choosing people", "people",
+    "<p>Faces are recognised across the whole batch and grouped into people. Choose one or more to keep only photos that include them; the best photos are then chosen from those.</p>" +
+    "<p>People are numbered by how often they appear, so the couple is usually near the top. Recognition can split one person into two if their face changes a lot, or merge two similar faces &mdash; choose both halves if you see someone twice.</p>"));
+  box.appendChild(h);
+  var b = mk("div", "params-b ppl-b");
+  var all = persons();
+  if (all.length && all[0].error) { b.appendChild(mk("p", "faint", "Could not recognise people: " + all[0].error)); box.appendChild(b); return box; }
+  if (!App.funnel.faces_probed || !all.length) { b.appendChild(mk("p", "faint", "No faces were recognised in this batch.")); box.appendChild(b); return box; }
+
+  var sel = chosenPeople();
+  var bar = mk("div", "ppl-bar");
+  var every = mk("button", "chip" + (sel.length ? "" : " on"), "Everyone"); every.type = "button";
+  every.addEventListener("click", function () { setPeople([]); });
+  bar.appendChild(every);
+  sel.forEach(function (id) {
+    var c = mk("button", "chip on", personLabel(id) + "  \u00d7"); c.type = "button";
+    c.addEventListener("click", function () { setPeople(chosenPeople().filter(function (x) { return x !== id; })); });
+    bar.appendChild(c);
+  });
+  b.appendChild(bar);
+
+  var list = all.filter(function (p) { return p.photos >= 2; });
+  var shown = App.expanded.ppl ? list : list.slice(0, 18);
+  var grid = mk("div", "ppl");
+  shown.forEach(function (p) {
+    var on = sel.indexOf(p.id) >= 0;
+    var c = mk("button", "ppl-c" + (on ? " on" : "")); c.type = "button";
+    c.setAttribute("aria-pressed", String(on));
+    var img = mk("img"); img.loading = "lazy"; img.alt = p.label; img.src = faceUrl(p);
+    c.appendChild(img);
+    c.appendChild(mk("span", "ppl-n", p.label));
+    c.appendChild(mk("span", "ppl-m", p.photos + " photos" + (p.in_funnel !== undefined ? " \u00b7 " + p.in_funnel + " still in" : "")));
+    c.addEventListener("click", function () {
+      var now = chosenPeople();
+      setPeople(on ? now.filter(function (x) { return x !== p.id; }) : now.concat([p.id]));
+    });
+    grid.appendChild(c);
+  });
+  b.appendChild(grid);
+  if (list.length > 18) {
+    var more = mk("button", "btn btn-sm more", App.expanded.ppl ? "Show fewer" : "Show all " + list.length + " people"); more.type = "button";
+    more.addEventListener("click", function () { App.expanded.ppl = !App.expanded.ppl; renderDynamic(); });
+    b.appendChild(more);
+  }
+  box.appendChild(b);
+  return box;
+}
+
 /* ------------------------------------------------------------ rejected pile */
 function pile(upto) {
   if (!App.funnel) return mk("span");
@@ -482,6 +578,7 @@ function renderAdd(stage) {
   var pickBig = mk("button", "btn btn-p btn-big", "\uD83D\uDCC1  Choose folder\u2026"); pickBig.type = "button";
   pickBig.addEventListener("click", chooseFolder);
   pickRow.appendChild(pickBig);
+  pickRow.appendChild(wantControl());
   pickRow.appendChild(mk("span", "faint", "Opens the Finder window. The photos in the folder you pick are found and analysed straight away."));
   stage.appendChild(pickRow);
   stage.appendChild(mk("div", "or", "or browse here"));
@@ -774,7 +871,7 @@ function dynStep(dyn, n) {
   }
 
   if (n === 3) dynPairs(dyn);
-  if (n === 10) dynBands(dyn);
+  if (n === 10) { dyn.appendChild(peoplePicker()); dynBands(dyn); }
   if (n === 11) {
     dyn.appendChild(section("Selects", f.selects.length));
     if (f.selects.length) {
@@ -856,7 +953,7 @@ function dynBands(dyn) {
     if (info.on) total += info.quota;
   });
   var q = mk("div", "qsum" + (total ? "" : " bad"),
-    total ? "Quotas total " + total + " select" + (total === 1 ? "" : "s") + ". A band short of its quota passes the rest to the strongest remaining frames."
+    total ? "Quotas ask for " + total + "; they are filled first, up to the " + P("want") + " best photos, and any room left goes to the strongest remaining frames."
           : "Every quota is 0 \u2014 the next step would have nothing to choose.");
   b.appendChild(q);
   box.appendChild(b);
@@ -875,7 +972,9 @@ function dynBands(dyn) {
 
 /* ---- 12 the best + export ---- */
 function renderBest(stage) {
-  stage.appendChild(head(12, "The best photo"));
+  var h = head(12, "The best photo");
+  h.appendChild(wantControl());
+  stage.appendChild(h);
   var dyn = mk("div"); dyn.id = "dyn"; stage.appendChild(dyn);
   dynBest(dyn);
   stage.appendChild(navRow(12, null));
@@ -918,6 +1017,15 @@ function dynBest(dyn) {
     win.appendChild(side);
     dyn.appendChild(win);
   }
+
+  var sel = chosenPeople();
+  var who = mk("div", "who");
+  who.appendChild(mk("span", "faint", sel.length ? "Best photos of" : "Best photos of everyone"));
+  sel.forEach(function (id) { who.appendChild(mk("span", "chip on", personLabel(id))); });
+  var ch = mk("button", "linkbtn", sel.length ? "Change people" : "Choose a person"); ch.type = "button";
+  ch.addEventListener("click", function () { go(10); });
+  who.appendChild(ch);
+  dyn.appendChild(who);
 
   dyn.appendChild(section("Selects", f.selects.length));
   dyn.appendChild(cardGrid(f.selects, { pin: null, why: function (nm) { return "#" + App.by[nm].pick_rank; } }, "sel12", 24));

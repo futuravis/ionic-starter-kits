@@ -93,6 +93,9 @@ var PARAMS = {
       help: "<p>This decides the bands more than anything else. At <code>2%</code> a guest in the background counts, so a portrait with onlookers lands in \"small group\". It counts <b>faces the detector found</b>, not people, so large groups are usually undercounted.</p>" }
   ],
   11: [
+    { key: "want", label: "How many best photos", min: 1, max: 60, step: 1, fmt: int,
+      range: ["1", "60"],
+      help: "<p>The number of photos the funnel ends with. Band quotas from step 10 are filled first, never past this number, and any room left goes to the strongest remaining frames.</p><p>Narrow at step 9 always keeps at least this many, so asking for more never runs out early.</p>" },
     { key: "shot_threshold", label: "How alike counts as the same moment", min: 20, max: 200, step: 5, fmt: int,
       range: ["20 little groups", "200 everything merges"],
       help: "<p>The same hash distance as Duplicates, but looser: that step asks \"is this the same photograph\", this asks \"is this the same moment\". Frames in between compete with each other rather than with the whole shoot.</p><p>Lower it to <code>60&ndash;80</code> if different poses are being merged.</p>" },
@@ -111,7 +114,7 @@ var STEP_HELP = {
   7: "<p><b>Not available in this version.</b> Reading expressions and closed eyes needs two models that are not installed: an expression classifier (<code>emotion-ferplus</code>) and a separate eye-state or landmark model, because closed eyes is not one of the expression classes.</p><p>This step passes everything through unchanged.</p>",
   8: "<p>A review step. Grain has no major fault, so nothing is removed unless you switch a check on. The noise weight is usually the better tool: it ranks grainy frames lower instead of removing them.</p>",
   9: "<p>Everything here is usable &mdash; only weaker than the rest. Keep the strongest N by score.</p>",
-  10: "<p>Sort survivors by how many faces they hold, and set how many selects each kind contributes. An album needs portraits and group shots, not six of whichever kind scored best.</p><p>Unticking a band <b>removes</b> its photos; a quota of 0 keeps them but asks for none.</p>",
+  10: "<p><b>Choose whose photos you want</b> from the faces recognised in the batch, then set how many selects each kind of shot contributes.</p><p>Sort survivors by how many faces they hold, and set how many selects each kind contributes. An album needs portraits and group shots, not six of whichever kind scored best.</p><p>Unticking a band <b>removes</b> its photos; a quota of 0 keeps them but asks for none.</p>",
   11: "<p>Frames can show the same moment without being duplicates. The quotas from step 10 are filled one moment at a time, so the selects are different photographs rather than one pose repeated.</p>",
   12: "<p>The single best frame, how it got there, and where to save the result.</p><p>The funnel's selects are numbered <code>01_</code> onward. Your manual picks go to <code>Manually_Selected/</code> and never change the funnel's answer.</p>"
 };

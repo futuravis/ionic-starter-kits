@@ -109,6 +109,13 @@ DEFAULTS: Dict[str, object] = {
 
     "shot_threshold": config.SHOT_GROUP_THRESHOLD,
     "prefer_clean": True,
+
+    # How many best photos the funnel ends with. Band quotas are filled first
+    # (in band order, never past this total) and any room left goes to the
+    # strongest remaining frames.
+    "want": 6,
+    # People to keep, by person id. Empty means everyone.
+    "people_sel": [],
 }
 
 LIMITS: Dict[str, Tuple[float, float]] = {
@@ -128,6 +135,7 @@ LIMITS: Dict[str, Tuple[float, float]] = {
     "q_solo": (0, 50), "q_duo": (0, 50), "q_small": (0, 50),
     "q_large": (0, 50), "q_none": (0, 50),
     "shot_threshold": (0, 256),
+    "want": (1, 300),
 }
 
 CHOICES = {"dup_keep": ("face", "score")}
@@ -148,6 +156,12 @@ def normalize(params: Optional[dict]) -> Dict[str, object]:
             continue
         default = DEFAULTS[key]
         try:
+            if isinstance(default, list):
+                if not isinstance(value, (list, tuple)):
+                    continue
+                value = [str(v) for v in value][:50]
+                out[key] = value
+                continue
             if isinstance(default, bool):
                 value = value if isinstance(value, bool) else str(value).lower() in ("1", "true", "yes", "on")
             elif isinstance(default, int):
@@ -353,6 +367,7 @@ class PhotoState:
     removed_by: Optional[int] = None
     reason: str = ""
     also: List[int] = field(default_factory=list)
+    people: List[str] = field(default_factory=list)   # person ids in this photo
     group: int = 0                  # moment, assigned at step 11
     pick_rank: int = 0              # 1-based among selects, 0 if not one
 
@@ -587,11 +602,18 @@ class FunnelResult:
 
 
 def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
-               faces_probed: bool = True) -> FunnelResult:
+               faces_probed: bool = True,
+               identities: Optional[Dict[str, List[str]]] = None) -> FunnelResult:
     """
     Decide, step by step, which photographs survive. Pure; never touches disk.
+
+    `identities` maps a photo's file name to the person ids recognised in it.
+    It is measurement, like everything else in `records`; the user's choice
+    of whom to keep arrives as the `people_sel` parameter.
     """
     p = normalize(params)
+    identities = identities or {}
+    want = int(p["want"])
     usable = [r for r in records if r.metrics.ok]
     failures = [{"name": r.name, "error": r.metrics.error}
                 for r in records if not r.metrics.ok]
@@ -613,6 +635,7 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
             record=r, quality=measured.get(r.path, 0.0), faces=count,
             main=main, band=_band(count, p["band_split"]),
             breakdown=breakdowns[i] if i < len(breakdowns) else {},
+            people=list(identities.get(r.name, [])),
         )
 
     # Batch-wide thresholds: the same meaning however earlier steps are set.
@@ -696,10 +719,21 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
     # --- 9 narrow -----------------------------------------------------------
     sr = steps[8]
     sr.before = len(alive)
-    keep = max(1, int(p["narrow_keep"]))
-    if len(alive) > keep:
-        tail = alive[keep:]
-        remove(9, [(st, f"rank {keep + i + 1} of {sr.before} by score")
+    # Never narrow below the number of best photos asked for.
+    keep = max(1, int(p["narrow_keep"]), want)
+    chosen_people = set(p["people_sel"]) if identities else set()
+
+    def wanted_person(st: PhotoState) -> bool:
+        return not chosen_people or bool(chosen_people & set(st.people))
+
+    # Narrowing ranks only the chosen people's photos. The others pass through
+    # untouched and are removed, with their real reason, at step 10 - so
+    # choosing a person never loses their photos to a ranking they did not
+    # need to win.
+    pool = [s for s in alive if wanted_person(s)]
+    if len(pool) > keep:
+        tail = pool[keep:]
+        remove(9, [(st, f"rank {keep + i + 1} of {len(pool)} by score")
                    for i, st in enumerate(tail)])
 
     # --- 10 people ----------------------------------------------------------
@@ -707,7 +741,7 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
     sr.before = len(alive)
     bands: Dict[str, dict] = {}
     for b in BANDS + ("unknown",):
-        here = [s for s in alive if s.band == b]
+        here = [s for s in alive if s.band == b and wanted_person(s)]
         bands[b] = {
             "label": BAND_LABEL[b],
             "count": len(here),
@@ -719,8 +753,13 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
     if not faces_probed:
         sr.available = False
         sr.note = "face model missing; every photo is unbanded"
-    remove(10, [(st, f"{BAND_LABEL[st.band].lower()} band switched off")
-                for st in alive if not bands[st.band]["on"]])
+    victims = []
+    for st in alive:
+        if not wanted_person(st):
+            victims.append((st, "does not include the chosen person"))
+        elif not bands[st.band]["on"]:
+            victims.append((st, f"{BAND_LABEL[st.band].lower()} band switched off"))
+    remove(10, victims)
 
     # --- 11 one per moment, honouring quotas --------------------------------
     sr = steps[10]
@@ -735,24 +774,21 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
     prefer = bool(p["prefer_clean"])
 
     if faces_probed:
-        shortfall = 0
         for b in BANDS:
-            if not bands[b]["on"]:
+            room = want - len(chosen)
+            if room <= 0 or not bands[b]["on"]:
                 continue
-            want = bands[b]["quota"]
+            quota = min(bands[b]["quota"], room)
             lanes = [[s for s in g if s.band == b] for g in groups]
-            got = _round_robin([l for l in lanes if l], want, taken, prefer)
+            got = _round_robin([l for l in lanes if l], quota, taken, prefer)
             chosen += got
             taken |= {s.name for s in got}
-            shortfall += max(0, want - len(got))
-        if shortfall:
-            got = _round_robin(groups, shortfall, taken, prefer)
-            chosen += got
-            taken |= {s.name for s in got}
-    else:
-        want = sum(int(p[f"q_{b}"]) for b in BANDS if p[f"band_{b}_on"])
-        chosen = _round_robin(groups, want, taken, prefer)
-        taken = {s.name for s in chosen}
+    # Whatever the quotas did not fill goes to the strongest remaining frames,
+    # still one moment at a time.
+    if len(chosen) < want:
+        got = _round_robin(groups, want - len(chosen), taken, prefer)
+        chosen += got
+        taken |= {s.name for s in got}
 
     winner_of = {}
     for s in chosen:
@@ -764,10 +800,8 @@ def run_funnel(records: Sequence[Record], params: Optional[dict] = None,
         w = winner_of.get(st.group)
         if w is not None:
             victims.append((st, f"beaten within its moment by {w.name}"))
-        elif not chosen:
-            victims.append((st, "every band quota is 0"))
         else:
-            victims.append((st, "its band's quota was already filled"))
+            victims.append((st, f"outside the best {want}"))
     remove(11, victims)
 
     chosen.sort(key=lambda s: (-s.score, s.name))

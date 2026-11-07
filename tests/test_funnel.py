@@ -109,11 +109,12 @@ def check_toggles(cache, paths) -> None:
 
 def check_narrow_and_quotas(cache, paths) -> None:
     print("\nnarrow and quotas without faces")
-    r = engine.run_funnel(cache.ordered(paths), {"narrow_keep": 3}, faces_probed=False)
+    r = engine.run_funnel(cache.ordered(paths), {"narrow_keep": 3, "want": 1}, faces_probed=False)
     ok("narrow keeps exactly N", r.steps[8].after == min(3, r.steps[8].before))
     none = engine.run_funnel(cache.ordered(paths),
-                             {f"q_{b}": 0 for b in engine.BANDS}, faces_probed=False)
-    ok("all quotas 0 gives no selects and no best", not none.selects and none.best is None)
+                             {**{f"q_{b}": 0 for b in engine.BANDS}, "want": 2}, faces_probed=False)
+    ok("quotas of 0 still yield the requested number of best photos",
+       len(none.selects) == 2 and none.best is not None, f"{len(none.selects)}")
 
 
 def check_people(cache, paths) -> None:
@@ -146,11 +147,43 @@ def check_people(cache, paths) -> None:
     ok("a face below the minimum size is not counted", tiny.states["good1.jpg"].faces == 0)
 
 
+def check_want_and_people(cache, paths) -> None:
+    print("\nhow many best photos, and choosing a person")
+    recs = cache.ordered(paths)
+    for rec in recs:          # check_people attaches synthetic faces; undo that
+        rec.faces = None
+    loose = {"focus_soft": 0, "exp_blown_on": False, "exp_bright_on": False,
+             "exp_dark_on": False, "shot_threshold": 0}
+    for want in (1, 3, 8):
+        r = engine.run_funnel(recs, {**loose, "want": want}, faces_probed=False)
+        ok(f"want={want} gives exactly {want} selects", len(r.selects) == want, f"{len(r.selects)}")
+    r = engine.run_funnel(recs, {**loose, "want": 9, "narrow_keep": 2}, faces_probed=False)
+    ok("narrow never keeps fewer than want", r.steps[8].after >= 9, f"{r.steps[8].after}")
+
+    names = [x.name for x in recs if x.metrics.ok]
+    ids = {n: (["pA"] if i % 3 == 0 else ["pB"]) for i, n in enumerate(names)}
+    ids[names[1]] = ["pA", "pB"]
+    with_a = {n for n, v in ids.items() if "pA" in v}
+    r = engine.run_funnel(recs, {**loose, "want": 3, "people_sel": ["pA"]},
+                          faces_probed=False, identities=ids)
+    ok("every select includes the chosen person",
+       r.selects and all(n in with_a for n in r.selects), str(r.selects))
+    ok("others are removed at step 10 with the reason",
+       all(r.states[n].removed_by == 10 and "chosen person" in r.states[n].reason
+           for n in names if n not in with_a and r.states[n].removed_by == 10))
+    ok("no photo of the chosen person is lost to narrowing elsewhere",
+       not any(r.states[n].removed_by == 9 for n in names if n not in with_a))
+    everyone = engine.run_funnel(recs, {**loose, "want": 3, "people_sel": []},
+                                 faces_probed=False, identities=ids)
+    ok("empty selection means everyone", not any(
+        "chosen person" in st.reason for st in everyone.states.values()))
+
+
 def check_purity(cache, paths) -> None:
     print("\nthe funnel ignores manual picks")
     import inspect
     sig = inspect.signature(engine.run_funnel)
-    ok("run_funnel takes no picks argument", "picks" not in sig.parameters, str(list(sig.parameters)))
+    ok("run_funnel takes no picks argument", "picks" not in sig.parameters and "people_sel" not in sig.parameters, str(list(sig.parameters)))
     a = engine.run_funnel(cache.ordered(paths), {}, faces_probed=False)
     b = engine.run_funnel(cache.ordered(paths), {}, faces_probed=False)
     ok("same inputs, same selects", a.selects == b.selects)
@@ -230,6 +263,7 @@ def main() -> int:
         check_toggles(cache, paths)
         check_narrow_and_quotas(cache, paths)
         check_people(cache, paths)
+        check_want_and_people(cache, paths)
         check_purity(cache, paths)
         check_params()
         check_export(cache, paths)

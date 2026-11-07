@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, urlparse
 
 import cv2
 
-from wedding_album import config, pipeline, scanner
+from wedding_album import config, people as album_people, pipeline, scanner
 from photo_shortlist import metrics as measurement
 from photo_shortlist import vertical
 from photo_shortlist.web import parse_multipart
@@ -64,6 +64,10 @@ class Session:
         self.picks: List[str] = []
         self.result: Optional[engine.FunnelResult] = None
         self.last_export: Optional[dict] = None
+        # who is in which photo: filled by _identify()
+        self.persons: List[dict] = []
+        self.identities: Dict[str, List[str]] = {}
+        self.faces_of: Dict[str, Dict[str, tuple]] = {}   # photo -> pid -> box
         # background job
         self.running = False
         self.stage = ""
@@ -106,6 +110,8 @@ class Session:
             self.picks = []
             self.result = None
             self.last_export = None
+            self.persons, self.identities, self.faces_of = [], {}, {}
+            self.params["people_sel"] = []
         if old and os.path.isdir(old):
             shutil.rmtree(old, ignore_errors=True)
 
@@ -367,6 +373,7 @@ def _job_analyse_folder(folder: str, recursive: bool) -> None:
         S.straightened = True
 
     S.cache.scan(paths, workers=workers, progress=S.step)
+    _identify(paths)
     S.step("running the funnel", 0, 0)
     result = _recompute()
 
@@ -398,6 +405,8 @@ def _job_scan() -> None:
     with S.lock:
         paths = list(S.files)
     measured = S.cache.scan(paths, workers=pipeline.default_workers(), progress=S.step)
+    if measured or not S.persons:
+        _identify(paths)
     _recompute()
     S.finish(message=f"Measured {measured} photo(s)." if measured else "Up to date.")
 
@@ -421,13 +430,65 @@ def _job_export(base: str, name: str, include: dict) -> None:
     S.finish(message=note + ".")
 
 
+def _identify(paths: List[str]) -> None:
+    """
+    Recognise who is in each photo, so the user can choose a person.
+
+    Uses wedding_album's SFace embeddings and clustering unchanged. Results are
+    cached inside the working directory by file version, so after the first
+    run this costs nothing, and a manually rotated photo is re-read.
+
+    A failure here is not fatal: the funnel works without identities, the
+    person chooser just stays empty and says why.
+    """
+    workers = pipeline.default_workers()
+    try:
+        results, _ = pipeline.analyze_faces(
+            S.ensure_workdir(), paths, workers=workers,
+            progress=lambda d, t: S.step("recognising people", d, t))
+        found = album_people.cluster(results)
+    except Exception as exc:  # noqa: BLE001 - reported in the UI instead
+        traceback.print_exc()
+        with S.lock:
+            S.persons = [{"error": f"{type(exc).__name__}: {exc}"}]
+            S.identities, S.faces_of = {}, {}
+        return
+
+    boxes = {r.filepath: [f.box for f in r.faces] for r in results}
+    identities: Dict[str, List[str]] = {}
+    faces_of: Dict[str, Dict[str, tuple]] = {}
+    persons: List[dict] = []
+    for i, person in enumerate(found, 1):
+        for ref in person.refs:
+            name = os.path.basename(ref.filepath)
+            ids = identities.setdefault(name, [])
+            if person.id not in ids:
+                ids.append(person.id)
+            bx = boxes.get(ref.filepath, [])
+            if ref.face_index < len(bx):
+                faces_of.setdefault(name, {})[person.id] = bx[ref.face_index]
+        best = person.best_ref
+        bx = boxes.get(best.filepath, [])
+        persons.append({
+            "id": person.id, "label": f"Person {i}",
+            "photos": person.photo_count,
+            "face": {"p": os.path.basename(best.filepath),
+                     "box": list(bx[best.face_index]) if best.face_index < len(bx) else None},
+        })
+    with S.lock:
+        S.persons, S.identities, S.faces_of = persons, identities, faces_of
+        known = {p["id"] for p in persons}
+        S.params["people_sel"] = [x for x in S.params.get("people_sel", []) if x in known]
+
+
 def _recompute() -> Optional[engine.FunnelResult]:
     with S.lock:
         records = S.cache.ordered(S.files)
         if not records or S.cache.stale(S.files):
             S.result = None
             return None
-        S.result = engine.run_funnel(records, S.params, S.cache.faces_probed)
+        S.result = engine.run_funnel(records, S.params, S.cache.faces_probed,
+                                     identities=S.identities)
         return S.result
 
 
@@ -465,6 +526,7 @@ def _photo(st: engine.PhotoState) -> dict:
         "shape": st.orientation, "dims": f"{m.width}x{m.height}",
         "removed_by": st.removed_by, "reason": st.reason, "also": st.also,
         "group": st.group, "pick_rank": st.pick_rank, "majors": st.majors,
+        "people": st.people,
         "faults": [f.payload() for f in st.faults],
         "breakdown": st.breakdown,
     }
@@ -489,7 +551,20 @@ def _funnel_payload() -> dict:
         "selects": r.selects, "best": r.best, "pairs": r.pairs,
         "bands": r.bands, "moments": r.moments, "failures": r.failures,
         "picks": picks,
+        "persons": _persons_payload(r),
     }
+
+
+def _persons_payload(r: engine.FunnelResult) -> List[dict]:
+    """People found, with how many of their photos are still in at step 10."""
+    with S.lock:
+        persons = [dict(p) for p in S.persons]
+    for p in persons:
+        if "id" in p:
+            p["in_funnel"] = sum(1 for st in r.states.values()
+                                 if p["id"] in st.people
+                                 and (st.removed_by is None or st.removed_by >= 9))
+    return persons
 
 
 def _state_payload() -> dict:
@@ -509,6 +584,7 @@ def _state_payload() -> dict:
         "stale": stale,
         "picks": picks,
         "defaults": engine.DEFAULTS,
+        "params": dict(S.params),
         "limits": engine.LIMITS,
         "faces_available": measurement.faces_available(),
         "max_files": MAX_FILES,
@@ -581,6 +657,31 @@ def _thumbnail(path: str, width: int) -> Optional[bytes]:
     except OSError:
         pass
     return data
+
+
+def _face_crop(path: str, box: str, size: int = 160) -> Optional[bytes]:
+    """A square crop around a face box given in detection-space coordinates."""
+    try:
+        x, y, w, h = (int(float(v)) for v in box.split(","))
+    except (ValueError, AttributeError):
+        return None
+    img = cv2.imread(path, cv2.IMREAD_COLOR)
+    if img is None:
+        return None
+    # Boxes were measured on a copy capped at FACE_DETECT_MAX_DIM.
+    longest = max(img.shape[:2])
+    if longest > config.FACE_DETECT_MAX_DIM:
+        s = config.FACE_DETECT_MAX_DIM / longest
+        img = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+    cx, cy, side = x + w / 2, y + h / 2, max(w, h) * 1.9
+    ih, iw = img.shape[:2]
+    x0, y0 = int(max(0, cx - side / 2)), int(max(0, cy - side / 2))
+    x1, y1 = int(min(iw, cx + side / 2)), int(min(ih, cy + side / 2))
+    if x1 - x0 < 8 or y1 - y0 < 8:
+        return None
+    crop = cv2.resize(img[y0:y1, x0:x1], (size, size), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", crop, [int(cv2.IMWRITE_JPEG_QUALITY), 86])
+    return buf.tobytes() if ok else None
 
 
 def _rotate(name: str, angle: int) -> str:
@@ -693,6 +794,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._error("unreadable", 404)
             # Versioned URLs are immutable: a rotated file gets a new ?v=.
             return self._send(data, "image/jpeg", cache="max-age=86400")
+        if route == "/api/face":
+            path = _safe(q.get("p", [""])[0])
+            if path is None:
+                return self._error("not found", 404)
+            data = _face_crop(path, q.get("box", [""])[0])
+            if data is None:
+                return self._error("unreadable", 404)
+            return self._send(data, "image/jpeg", cache="max-age=86400")
         if route == "/api/ranking.csv":
             with S.lock:
                 r, picks = S.result, list(S.picks)
@@ -772,7 +881,11 @@ class Handler(BaseHTTPRequestHandler):
                 if body.get("reset"):
                     S.params = dict(engine.DEFAULTS)
             if _recompute() is None:
-                return self._error("Photos need measuring first.", 409, scan_needed=True)
+                # Saved anyway, so "best photos" can be set before choosing a folder.
+                with S.lock:
+                    saved = dict(S.params)
+                return self._json({"ready": False, "params": saved,
+                                   "scan_needed": bool(S.files)})
             return self._json(_funnel_payload())
 
         if route == "/api/pick":
