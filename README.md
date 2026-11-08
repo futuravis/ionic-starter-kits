@@ -15,6 +15,103 @@ Validated on a real 245-photo ceremony as well as synthetic test images.
 
 ---
 
+## Features
+
+Everything runs locally on standard-library Python + OpenCV (no web
+framework, no cloud). Every tool is **non-destructive** — originals are only
+ever read or copied — and every web UI binds to `127.0.0.1` only.
+
+### `photo_funnel` — the main app
+
+Review a shoot in twelve named steps, each removing photos for one stated
+reason, with its thresholds exposed and the exact frames it took shown.
+
+- **Twelve-step funnel:** Add → Straighten → Duplicates → Exposure → Focus →
+  Subject → Expressions → Grain → Narrow → People → Per moment → The best.
+- **One-click analysis:** `Choose folder…` opens a native folder dialog, and a
+  single action finds, copies, straightens, measures and runs the whole first
+  half of the funnel.
+- **Auto-straighten:** detects sideways frames and rotates working copies
+  upright in whole quarter-turns; manual 90/180/270 rotation is also available.
+- **Duplicate handling:** clusters near-identical frames by perceptual hash and
+  keeps one per cluster (sharpest face or best score); you can swap which frame
+  survives, or restore the automatic choice.
+- **Exposure, focus, subject & grain checks:** absolute thresholds for exposure
+  (blown/dark/shadow/hot), batch-relative percentiles for focus and grain, and
+  face-aware subject checks (face in focus/shadow, head turned, nobody in
+  frame).
+- **Smart narrowing:** keep the top-N by score, band photos by face count
+  (solo/duo/small/large), cluster into "moments" and fill per-band quotas
+  round-robin so picks are genuinely different photographs.
+- **Live thresholds:** photos are measured once and cached by path, mtime and
+  size; every slider re-runs the whole funnel in ~5 ms.
+- **Nothing is lost:** every step carries its rejected pile, and any frame can
+  be claimed into a separate **Manually selected** set that never alters the
+  funnel's own result.
+- **Non-overwriting export:** suggests a destination and versioned folder name
+  (`BestImages_vN`), refuses to overwrite, and writes numbered selects,
+  `Manually_Selected/`, optional rejects grouped by step, optional 9:16
+  versions, a notes file and a ranking CSV.
+
+> **Note:** Step 7 (Expressions) is disabled — detecting closed eyes/smiles
+> needs models that are not installed, so the step passes everything through.
+
+### `photo_shortlist` — rank and diagnose a batch
+
+- **Full ranking** of every photo 1→N by score, plus the **single best** photo.
+- **Shortlist** built round-robin across look-alike bundles, so N picks are N
+  *different* photographs rather than N frames of one pose.
+- **Named faults** in a photographer's words (dark, washed out, soft, grainy,
+  face in shadow, head turned, nobody in frame, …) and a batch-wide fault tally.
+- **Noise-robust sharpness** measured across four scales so grain doesn't read
+  as sharpness.
+- **Browser and terminal:** drag-drop web UI, or `pick FOLDER` on the command
+  line (`--want`, `--workers`, `--keep-duplicates`, `--no-faces`,
+  `--picks-only`, `--drop-worst`).
+- **9:16 conversion:** place the whole frame on a vertical canvas with a
+  blurred colour wash (`convert`), or an edge-to-edge crop (`convert_cropped`).
+- **Exports:** zip of picks with a notes file and the full-ranking CSV.
+
+### `photo_studio` — three-step gallery (superseded by the funnel)
+
+- Reuses the `photo_shortlist` engine and shares its in-memory batch.
+- Static-file gallery site with a per-photo **detail / lightbox** view showing
+  a photo and its shot-group siblings.
+- In-place straighten, analyse (want / skip-duplicates / use-faces /
+  drop-worst), and zip/CSV export.
+
+### `wedding_album` — organise a whole wedding
+
+- **Face detection & people grouping:** YuNet detection + SFace embeddings,
+  clustered into distinct people (with the "two faces in one photo can't be the
+  same person" constraint).
+- **Labelling:** assign relationship roles (bride/groom/family/friend/ignore)
+  interactively, by setting IDs, or by renaming exported face images.
+- **Sections:** assign each photo to an album section by relationship priority,
+  with an audit reason per photo.
+- **Timeline aware:** reads EXIF capture time so look-alikes taken hours apart
+  count as different moments and picks read in chronological order.
+- **Album organization:** copy into a versioned `BestImages_vN/` tree with
+  picks, runners-up and a written report; `batch` processes a whole collection
+  at once (flat or per-shoot album trees).
+- **CLI subcommands:** `scan`, `quality`, `download-models`, `faces`, `people`,
+  `label`, `names`, `sections`, `organize`, `batch`, `shoots`, `serve`.
+
+### `tools/` — diagnostics for tuning
+
+- `ceremony_order.py` — reconstruct the day's running order from EXIF times.
+- `compare_folders.py` — decide if two shoot folders hold the same people.
+- `find_same_person.py` — surface near-miss clusters of the same person.
+- `why_not_merged.py` — explain why two look-alike clusters were kept apart.
+- `threshold_sweep.py` — show how the same-person threshold changes people
+  counts.
+- `regroup.py` — restructure a flat collection into event → phase → shoot.
+- `normalize_names.py` — tidy collection folder names (rename only).
+- `drive_api.py` / `drive_batch.py` — exercise the web API the way the browser
+  does.
+
+---
+
 ## Photo Funnel
 
 ```bash
