@@ -191,6 +191,7 @@ function go(n) {
   if (n >= 2 && (!App.state || !App.state.files.length)) { toast("Add some photos first.", "bad"); return; }
   var ready = n >= 3 ? ensureFunnel() : Promise.resolve();
   ready.then(function () {
+    if (App.step !== n) App.exportOpen = false;
     App.step = n;
     App.expanded = {};
     if (location.hash !== "#" + n) history.replaceState(null, "", "#" + n);
@@ -205,7 +206,46 @@ function head(n, title) {
   h.appendChild(mk("h1", null, n + " \u00b7 " + title));
   h.appendChild(infoBtn(title, "Step " + n, STEP_HELP[n] || "", null, true));
   h.appendChild(mk("span", "grow"));
+  var ex = mk("button", "btn btn-sm export-top"); ex.type = "button"; ex.id = "exportTop";
+  ex.addEventListener("click", function () { toggleExport(n); });
+  h.appendChild(ex);
   return h;
+}
+
+/* The photos an export taken at step n would hold, best first. Mirrors
+   export.survivors on the server: steps 11 and 12 end with the selects;
+   before that, whatever no step up to n has removed. */
+function exportNames(n) {
+  var f = App.funnel;
+  if (!f) return [];
+  if (n >= 11) return f.selects.slice();
+  return f.photos.filter(function (p) { return !p.removed_by || p.removed_by > n; })
+    .map(function (p) { return p.name; });
+}
+function paintExportTop() {
+  var b = $("exportTop"); if (!b) return;
+  b.hidden = !App.funnel;
+  if (!App.funnel) { App.exportOpen = false; var s = $("exportSlot"); if (s) s.innerHTML = ""; return; }
+  var c = exportNames(App.step).length;
+  b.textContent = App.step === 12 ? "\u2913 Save\u2026" : "\u2913 Export " + c + " photo" + (c === 1 ? "" : "s") + (App.exportOpen ? " \u25B4" : "\u2026");
+  b.classList.toggle("on", !!App.exportOpen && App.step !== 12);
+}
+/* Every step but the last keeps its export panel folded away under the
+   header; the last step always shows it, so the button just scrolls there. */
+function toggleExport(n) {
+  if (n === 12) { var box = $("exportBox"); if (box) box.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  App.exportOpen = !App.exportOpen;
+  paintExportSlot();
+  paintExportTop();
+  if (App.exportOpen) $("exportSlot").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function paintExportSlot() {
+  var stage = $("stage"), h = stage.querySelector(".head");
+  if (!h || App.step === 12) return;
+  var slot = $("exportSlot");
+  if (!slot) { slot = mk("div"); slot.id = "exportSlot"; stage.insertBefore(slot, h.nextSibling); }
+  slot.innerHTML = "";
+  if (App.exportOpen && App.funnel) slot.appendChild(exportPanel());
 }
 function tally(before, removed, why) {
   var t = mk("div", "tally");
@@ -274,6 +314,35 @@ function swap(name, auto) {
     toast(auto ? "Keeper handed back to the engine" : "Swapped \u2014 your frame is kept", "ok");
   }).catch(function (e) { toast(e.message, "bad"); });
 }
+function delBtn(name) {
+  var b = mk("button", "del", "\uD83D\uDDD1 Delete");
+  b.type = "button";
+  b.title = App.state && App.state.source_dir
+    ? "Move the original into Deleted/ inside " + App.state.source_pretty + " and drop it from the funnel"
+    : "Drop it from the funnel";
+  b.setAttribute("aria-label", "Delete " + name);
+  b.addEventListener("click", function (e) { e.stopPropagation(); delPhoto(name); });
+  return b;
+}
+function delPhoto(name) {
+  api("/api/delete", { name: name }).then(function (d) {
+    App.state.files = d.files;
+    applyFunnel(d.funnel);
+    App.dests = null;                     /* Deleted/ is a new folder there */
+    var i = App.lb.list.indexOf(name);
+    if (i >= 0) {
+      App.lb.list.splice(i, 1);
+      if (App.lb.at >= App.lb.list.length) App.lb.at = Math.max(0, App.lb.list.length - 1);
+    }
+    toast(d.message, "good");
+    return refreshState();
+  }).then(function () {
+    if (!$("lightbox").hidden) { if (App.lb.list.length) showLb(); else closeLb(); }
+    if (!App.state.files.length) { App.funnel = null; go(1); return; }
+    if (!App.funnel && App.step >= 3) { go(App.step); return; }
+    renderDynamic();
+  }).catch(function (e) { toast(e.message, "bad"); });
+}
 function card(name, opt) {
   opt = opt || {};
   var p = App.by[name];
@@ -299,6 +368,7 @@ function card(name, opt) {
   }
   if (opt.extra) m.appendChild(opt.extra);
   if (opt.pick !== false && p) m.appendChild(pickBtn(name));
+  if (opt.del !== false && fileInfo(name)) m.appendChild(delBtn(name));
   c.appendChild(m);
   return c;
 }
@@ -569,6 +639,8 @@ function render() {
   var stage = $("stage"); stage.innerHTML = "";
   var fn = { 1: renderAdd, 2: renderStraighten, 12: renderBest }[App.step] || renderStep;
   fn(stage, App.step);
+  paintExportSlot();
+  paintExportTop();
 }
 function renderDynamic() {
   paintRail();
@@ -578,6 +650,12 @@ function renderDynamic() {
   var fn = { 2: dynStraighten, 12: dynBest }[App.step] || dynStep;
   fn(dyn, App.step);
   paintHits(App.step);
+  paintExportTop();
+  /* The folded-away panel lives outside #dyn: refresh its counts, or rebuild
+     it when the destinations need loading again. */
+  if (App.step !== 12 && App.exportOpen) {
+    if (App.dests && $("pathbox")) paintPreview(); else paintExportSlot();
+  }
 }
 
 /* ---- 1 add ---- */
@@ -946,6 +1024,7 @@ function dynPairs(dyn) {
         m.appendChild(swapBtn(name, false));
         m.appendChild(pickBtn(name));
       }
+      m.appendChild(delBtn(name));
       return m;
     }
     row.appendChild(mini(pr.keeper, true, App.by[pr.keeper].score));
@@ -1047,6 +1126,7 @@ function dynBest(dyn) {
     side.appendChild(mk("div", "fn", p.name));
     side.appendChild(mk("div", "faint", [p.dims, p.shape, p.faces >= 0 ? p.faces + " face(s)" : null, "best of " + f.total].filter(Boolean).join(" \u00b7 ")));
     side.appendChild(faultList(p)); side.appendChild(bars(p.breakdown)); side.appendChild(pickBtn(p.name));
+    side.appendChild(delBtn(p.name));
     win.appendChild(side);
     dyn.appendChild(win);
   }
@@ -1107,8 +1187,11 @@ function destBase() {
 function exportPanel() {
   var box = mk("div", "params");
   box.id = "exportBox";
-  var h = mk("div", "params-h"); h.appendChild(mk("h3", null, "Save the selected photos"));
-  h.appendChild(infoBtn("Saving", "export", "<p>Copies go to the folder you choose. <b>Nothing is ever overwritten</b>: if the folder exists, saving stops and offers the next free name.</p><p>The funnel's selects are numbered in score order. Your manual picks go to <code>Manually_Selected/</code> with their original names. Photos are written upright, as straightened at step 2.</p>"));
+  var n = App.step;
+  var title = n >= 11 ? "Save the selected photos"
+    : "Save the photos still in after step " + n + " \u00b7 " + STEP_NAMES[n];
+  var h = mk("div", "params-h"); h.appendChild(mk("h3", null, title));
+  h.appendChild(infoBtn("Saving", "export", "<p>You can stop at any step and save what is still in the funnel there. Copies go to the folder you choose; inside the shoot folder the suggested name is <code>Filter_v1</code>, then <code>Filter_v2</code>, and so on. <b>Nothing is ever overwritten</b>: if the folder exists, saving stops and offers the next free name.</p><p>The photos are numbered in score order. Your manual picks go to <code>Manually_Selected/</code> with their original names. Photos are written upright, as straightened at step 2.</p>"));
   box.appendChild(h);
   var b = mk("div", "params-b"); b.id = "exportBody";
   b.appendChild(mk("p", "faint", "Loading destinations\u2026"));
@@ -1123,7 +1206,7 @@ function paintExport() {
   var dests = App.dests.destinations;
   if (!App.dest.key) { var sug = dests.filter(function (x) { return x.suggested; })[0] || dests[0]; App.dest.key = sug.key; }
   var d = currentDest();
-  if (!App.dest.touched) App.dest.name = d.names[0] || "BestImages_v1";
+  if (!App.dest.touched) App.dest.name = d.names[0] || "Filter_v1";
 
   var row1 = mk("div", "prm"); row1.style.alignItems = "start";
   var l1 = mk("div"); l1.appendChild(mk("div", "prm-name", "Where to save"));
@@ -1163,7 +1246,9 @@ function paintExport() {
   INCLUDES.forEach(function (it) {
     var lab = mk("label"); var c = mk("input", "ck"); c.type = "checkbox"; c.checked = !!App.dest.include[it[0]];
     c.addEventListener("change", function () { App.dest.include[it[0]] = c.checked; paintPreview(); });
-    lab.appendChild(c); lab.appendChild(document.createTextNode(it[1])); inc.appendChild(lab);
+    var text = it[0] === "selects" && App.step < 11 ? "The photos still in, numbered"
+      : it[0] === "rejected" && App.step < 11 ? "Frames removed so far, by step" : it[1];
+    lab.appendChild(c); lab.appendChild(document.createTextNode(text)); inc.appendChild(lab);
   });
   row3.appendChild(inc);
   b.appendChild(row3);
@@ -1202,23 +1287,27 @@ function paintPreview() {
   var exists = d.key !== "custom" && (d.existing || []).indexOf(name) >= 0;
   warn.hidden = !exists;
   warn.textContent = exists ? name + " already exists here. Nothing will be overwritten \u2014 pick another name." : "";
-  var f = App.funnel, inc = App.dest.include, lines = [];
+  var f = App.funnel, inc = App.dest.include, lines = [], step = App.step;
+  var kept = exportNames(step), width = Math.max(2, String(kept.length).length);
   var full = base.replace(/\/+$/, "") + "/" + (name || "\u2026") + "/";
   pb.innerHTML = "";
   pb.appendChild(mk("span", "hl", full)); pb.appendChild(document.createTextNode("\n"));
-  if (inc.selects) f.selects.forEach(function (n, i) { lines.push("  " + (i < 9 ? "0" : "") + (i + 1) + "_" + n); });
+  if (inc.selects) {
+    kept.slice(0, 30).forEach(function (n, i) { lines.push("  " + String(i + 1).padStart(width, "0") + "_" + n); });
+    if (kept.length > 30) lines.push("  \u2026 and " + (kept.length - 30) + " more");
+  }
   if (inc.manual) lines.push("  Manually_Selected/      " + picks().length + " photo(s)");
-  if (inc.vertical) lines.push("  Vertical/               " + f.selects.length + " at 1080\u00d71920");
-  if (inc.rejected) lines.push("  Rejected/               " + f.photos.filter(function (p) { return p.removed_by; }).length + " photo(s), by step");
+  if (inc.vertical) lines.push("  Vertical/               " + kept.length + " at 1080\u00d71920");
+  if (inc.rejected) lines.push("  Rejected/               " + f.photos.filter(function (p) { return p.removed_by && p.removed_by <= step; }).length + " photo(s), by step");
   if (inc.notes) lines.push("  why_these_photos.txt");
   if (inc.csv) lines.push("  ranking.csv");
   pb.appendChild(document.createTextNode(lines.join("\n")));
-  var count = (inc.selects ? f.selects.length : 0) + (inc.manual ? picks().length : 0);
+  var count = (inc.selects ? kept.length : 0) + (inc.manual ? picks().length : 0);
   save.textContent = "Save " + count + " photo" + (count === 1 ? "" : "s") + " to " + (name || "\u2026");
   save.disabled = !name || exists || (d.key === "custom" && !App.dest.custom.trim());
 }
 function doExport() {
-  api("/api/export", { path: destBase(), name: App.dest.name, include: App.dest.include })
+  api("/api/export", { path: destBase(), name: App.dest.name, include: App.dest.include, step: App.step })
     .then(waitJob)
     .then(function (p) {
       toast(p.message, "good");
@@ -1262,6 +1351,7 @@ function showLb() {
   side.appendChild(mk("div", null, p.removed_by ? "Removed at step " + p.removed_by + " (" + STEP_NAMES[p.removed_by] + "): " + p.reason
     : p.pick_rank ? "Select #" + p.pick_rank + (App.funnel.best === name ? " \u2014 the best photo" : "") : "In the funnel"));
   side.appendChild(pickBtn(name));
+  side.appendChild(delBtn(name));
   side.appendChild(mk("h4", null, "Faults")); side.appendChild(faultList(p));
   side.appendChild(mk("h4", null, "Measurements")); side.appendChild(bars(p.breakdown));
 }

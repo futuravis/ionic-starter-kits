@@ -105,7 +105,7 @@ var PARAMS = {
 };
 
 var STEP_HELP = {
-  1: "<p>Drop photos in, or open a folder on disk. Either way they are <b>copied</b> into a working area first &mdash; your originals are never modified.</p><p>Opening a folder lets the final step save the selection inside it.</p>",
+  1: "<p>Drop photos in, or open a folder on disk. Either way they are <b>copied</b> into a working area first &mdash; rotating and filtering never change your originals.</p><p>Opening a folder lets any step save what is still in the funnel inside it, as <code>Filter_v1</code>, <code>Filter_v2</code>, and so on. <b>Delete</b> on a photo moves its original into <code>Deleted/</code> inside that folder, keeping its subfolder path, so it can be moved back by hand.</p>",
   2: "<p>Rotates frames so heads sit at the top, using whichever quarter turn the face detector is most confident about. These files often carry no usable orientation tag, so it has to be measured.</p><p>Quarter turns only &mdash; nothing cropped or stretched. Frames with no face are left alone; rotate those by hand.</p>",
   3: "<p>Near-identical frames. Only one of each survives.</p><p>Duplicates run before the quality steps because finding them needs the photos decoded anyway, and the decode is most of the cost.</p>",
   4: "<p>Light that cannot be fixed afterwards. Each check is independent; untick one to keep those frames.</p><p>A photo is counted against the <b>first</b> step that removes it. Cards show other steps it would also fail.</p>",

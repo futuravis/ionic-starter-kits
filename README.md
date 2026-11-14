@@ -35,9 +35,18 @@ popover explaining how to choose them, and shows exactly which frames it took.
 On a real 245-photo ceremony: 87 frames rotated upright, then
 245 -> 194 -> 166 -> 129 -> 107 -> 18 -> 17 -> 6 -> 1.
 
-- **Your originals are never modified.** Photos are copied into a working
+- **Filtering never changes your originals.** Photos are copied into a working
   directory first; rotation rewrites the copies only. Verified by comparing
   file modification times and sizes before and after a full run.
+- **Delete moves, it does not erase.** The Delete button on any photo moves
+  its original into `Deleted/` inside the folder you opened, keeping its
+  subfolder path (`Deleted/Day1/IMG_0001.jpg`), and drops it from the funnel.
+  An existing file there is never replaced. Photos added by drag and drop have
+  no folder on disk, so Delete only drops them from the funnel.
+- **Export at any step.** Every step has an **Export** button in its header
+  that saves the photos still in the funnel at that point. Inside the shoot
+  folder the suggested name is `Filter_v1`, then `Filter_v2`, and so on.
+  Re-analysing the folder skips `Deleted/` and every `Filter_vN/`.
 - **Measured once, decided instantly.** Photos are measured on entering step 3
   and cached by path, modification time and size. Every slider after that
   recomputes the whole funnel in about 5 ms.
@@ -45,7 +54,7 @@ On a real 245-photo ceremony: 87 frames rotated upright, then
   claimed into **Manually selected**, a separate set that never changes the
   funnel's own result.
 - **Saving never overwrites.** Step 12 suggests a destination and folder name
-  (`BestImages_vN`, `Muhurtham_Selects`, ...), refuses a folder that exists,
+  (`Filter_vN`, `Muhurtham_Selects`, ...), refuses a folder that exists,
   and writes numbered selects, `Manually_Selected/`, optional rejects grouped
   by step, optional 9:16 versions, notes and a ranking CSV.
 - **Deep links:** `http://127.0.0.1:8770/#5` opens step 5.

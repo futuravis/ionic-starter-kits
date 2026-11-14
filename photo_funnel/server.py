@@ -5,15 +5,20 @@ Its own session, deliberately: photo_studio and photo_shortlist share one
 in-memory batch, which meant running both at once had them treading on each
 other. This one owns its state outright.
 
-The originals are never touched. Whether photos arrive by browser upload or
-by opening a folder on disk, they are copied into a temporary working
-directory first; straightening and manual rotation rewrite those copies only.
+Whether photos arrive by browser upload or by opening a folder on disk, they
+are copied into a temporary working directory first; straightening and manual
+rotation rewrite those copies only.
+
+The one thing that touches an original is Delete, and only when the user asks
+for it: the original is moved, never removed, into a Deleted/ folder inside
+the folder that was opened (see _delete).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -39,6 +44,10 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 MAX_FILES = 300
 MAX_UPLOAD_BYTES = 1024 * 1024 * 1024
+# Deleted originals are moved here, inside the folder that was opened.
+DELETED_DIR = "Deleted"
+# Export folders written by this app: Filter_v1, Filter_v2, ...
+_EXPORT_DIR_RE = re.compile(rf"^{re.escape(export.PREFIX.lower())}_v\d+$")
 ROTATIONS = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180,
              270: cv2.ROTATE_90_COUNTERCLOCKWISE}
 
@@ -55,6 +64,9 @@ class Session:
         self.lock = threading.RLock()
         self.workdir = ""
         self.files: List[str] = []           # working copies, in order
+        # photo name -> the original file on disk it was copied from. Uploads
+        # have no entry: the browser does not say where a file came from.
+        self.origins: Dict[str, str] = {}
         self.source_dir: Optional[str] = None
         self.mixed_sources = False
         self.angles: Dict[str, int] = {}     # name -> degrees applied so far
@@ -106,6 +118,7 @@ class Session:
             old = self.workdir
             self.workdir = ""
             self.files = []
+            self.origins = {}
             self.source_dir = None
             self.mixed_sources = False
             self.angles = {}
@@ -127,7 +140,7 @@ class Session:
                     return p
         return None
 
-    def add_file(self, name: str, writer) -> Optional[str]:
+    def add_file(self, name: str, writer, origin: Optional[str] = None) -> Optional[str]:
         """Place one file in the working dir under a unique name."""
         directory = self.ensure_workdir()
         stem, ext = os.path.splitext(os.path.basename(name.replace("\\", "/")))
@@ -139,9 +152,46 @@ class Session:
         writer(target)
         with self.lock:
             self.files.append(target)
+            if origin:
+                self.origins[os.path.basename(target)] = os.path.abspath(origin)
             self.result = None
             self.straightened = False
         return target
+
+    def forget(self, name: str) -> Optional[str]:
+        """
+        Take one photo out of the batch and everything that refers to it.
+
+        Returns the working copy's path (still on disk; the caller removes
+        it), or None if the photo is not in the batch.
+        """
+        with self.lock:
+            path = self.by_name(name)
+            if path is None:
+                return None
+            self.files = [p for p in self.files if p != path]
+            self.cache.records.pop(path, None)
+            self.origins.pop(name, None)
+            self.angles.pop(name, None)
+            self.picks = [n for n in self.picks if n != name]
+            self.dup_keepers = {k: v for k, v in self.dup_keepers.items()
+                                if k != name and v != name}
+            for pid in self.identities.pop(name, []):
+                for person in self.persons:
+                    if person.get("id") == pid and person.get("photos", 0) > 0:
+                        person["photos"] -= 1
+            self.faces_of.pop(name, None)
+            # A person whose face thumbnail came from this photo gets another.
+            for person in self.persons:
+                face = person.get("face") or {}
+                if face.get("p") != name:
+                    continue
+                other = next(((n, boxes[person["id"]]) for n, boxes in self.faces_of.items()
+                              if person.get("id") in boxes), None)
+                person["face"] = ({"p": other[0], "box": list(other[1])} if other
+                                  else {"p": None, "box": None})
+            self.result = None
+            return path
 
     # -- job ---------------------------------------------------------------
     def begin(self, stage: str) -> bool:
@@ -214,17 +264,29 @@ def _is_image(name: str) -> bool:
             and os.path.splitext(name)[1].lower() in config.IMAGE_EXTENSIONS)
 
 
+def _skip_dir(name: str) -> bool:
+    """
+    Folders never scanned for photos: wedding_album's own skip list, plus this
+    app's Deleted/ folder and its Filter_vN exports. Without the last two,
+    analysing the same shoot again would bring back what was deleted and
+    count every exported photo twice.
+    """
+    lowered = name.lower()
+    return (scanner._excluded(name) or lowered == DELETED_DIR.lower()
+            or bool(_EXPORT_DIR_RE.match(lowered)))
+
+
 def _visible_dir(entry: os.DirEntry) -> bool:
     name = entry.name
     return (not name.startswith(".") and name.lower() not in _BROWSE_HIDE
-            and not scanner._excluded(name) and entry.is_dir(follow_symlinks=False))
+            and not _skip_dir(name) and entry.is_dir(follow_symlinks=False))
 
 
 def _count_tree(path: str) -> Tuple[int, bool]:
     """Photos in `path` and below, using the same skip rules as import."""
     total = 0
     for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if not d.startswith(".") and not scanner._excluded(d)]
+        dirs[:] = [d for d in dirs if not d.startswith(".") and not _skip_dir(d)]
         total += sum(1 for f in files if _is_image(f))
         if total >= _COUNT_CAP:
             return total, True
@@ -318,7 +380,11 @@ def _native_pick(start: str) -> dict:
 
 def _list_images(folder: str, recursive: bool) -> List[str]:
     if recursive:
-        return scanner.find_images(folder)
+        found = []
+        for root, dirs, files in os.walk(folder):
+            dirs[:] = [d for d in dirs if not _skip_dir(d)]
+            found += [os.path.join(root, f) for f in files if _is_image(f)]
+        return sorted(found)
     return sorted(os.path.join(folder, n) for n in os.listdir(folder)
                   if _is_image(n) and os.path.isfile(os.path.join(folder, n)))
 
@@ -328,7 +394,7 @@ def _job_import(folder: str, recursive: bool = True) -> None:
     room = MAX_FILES - len(S.files)
     taken = images[:max(0, room)]
     for i, src in enumerate(taken, 1):
-        S.add_file(os.path.basename(src), lambda dst, s=src: shutil.copy2(s, dst))
+        S.add_file(os.path.basename(src), lambda dst, s=src: shutil.copy2(s, dst), origin=src)
         S.step("copying photos", i, len(taken))
     with S.lock:
         if S.source_dir is None and not S.mixed_sources and len(S.files) == len(taken):
@@ -362,7 +428,7 @@ def _job_analyse_folder(folder: str, recursive: bool) -> None:
 
     taken = images[:MAX_FILES]
     for i, src in enumerate(taken, 1):
-        S.add_file(os.path.basename(src), lambda dst, s=src: shutil.copy2(s, dst))
+        S.add_file(os.path.basename(src), lambda dst, s=src: shutil.copy2(s, dst), origin=src)
         S.step("copying photos", i, len(taken))
     with S.lock:
         S.source_dir = os.path.abspath(folder)
@@ -416,14 +482,15 @@ def _job_scan() -> None:
     S.finish(message=f"Measured {measured} photo(s)." if measured else "Up to date.")
 
 
-def _job_export(base: str, name: str, include: dict) -> None:
+def _job_export(base: str, name: str, include: dict, step: int = export.FINAL_STEP) -> None:
     with S.lock:
         result, picks, workdir = S.result, list(S.picks), S.workdir
     if result is None:
         S.finish(error="Analyse the photos first.")
         return
     try:
-        summary = export.write(result, picks, base, name, include, workdir, progress=S.step)
+        summary = export.write(result, picks, base, name, include, workdir,
+                               progress=S.step, step=step)
     except export.ExportError as exc:
         S.finish(error=str(exc))
         return
@@ -709,6 +776,75 @@ def _rotate(name: str, angle: int) -> str:
     return ""
 
 
+def _deleted_target(origin: str, source: Optional[str]) -> str:
+    """
+    Where a deleted original goes: <opened folder>/Deleted/<its path inside it>.
+
+    Keeping the subfolder path means two IMG_0001.jpg from different
+    subfolders cannot collide, and shows where each one came from. A photo
+    from outside the opened folder goes to a Deleted/ beside it instead. An
+    existing file is never replaced: the name gets _2, _3, ...
+    """
+    folder, rel = os.path.dirname(origin), os.path.basename(origin)
+    if source:
+        real_src, real_org = os.path.realpath(source), os.path.realpath(origin)
+        if real_org.startswith(real_src.rstrip(os.sep) + os.sep):
+            folder, rel = source, os.path.relpath(real_org, real_src)
+    target = os.path.join(folder, DELETED_DIR, rel)
+    stem, ext = os.path.splitext(target)
+    n = 2
+    while os.path.exists(target):
+        target = f"{stem}_{n}{ext}"
+        n += 1
+    return target
+
+
+def _delete(name: str) -> Tuple[str, str]:
+    """
+    Delete one photo: move its original into Deleted/ and drop it from the
+    batch. Returns (message, error); on error nothing has changed.
+
+    The original is moved, not removed, so it can be put back by hand. If the
+    move fails the photo stays in the batch, so a failed delete never looks
+    like a successful one.
+    """
+    with S.lock:
+        path = S.by_name(name)
+        if path is None:
+            return "", "no such photo"
+        origin, source = S.origins.get(name), S.source_dir
+
+        if origin and os.path.isfile(origin):
+            if not _allowed(origin):
+                return "", "That photo is outside your home folder and external drives."
+            target = _deleted_target(origin, source)
+            try:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.move(origin, target)
+            except OSError as exc:
+                return "", (f"Could not move {name} to {DELETED_DIR}/: "
+                            f"{exc.strerror or exc}. Nothing was changed.")
+            message = f"Moved {name} to {export.pretty(target)}"
+        elif origin:
+            message = (f"Removed {name} from the batch. Its original was no longer at "
+                       f"{export.pretty(origin)}, so nothing was moved")
+        else:
+            message = (f"Removed {name} from the batch. It was uploaded, so there is no "
+                       f"original folder to move it into")
+
+        S.forget(name)
+        thumbs = os.path.join(S.workdir, ".thumbs")
+        for leftover in [path] + ([os.path.join(thumbs, t) for t in os.listdir(thumbs)
+                                   if t.startswith(name + ".")]
+                                  if os.path.isdir(thumbs) else []):
+            try:
+                os.remove(leftover)
+            except OSError:
+                pass
+        _recompute()
+    return message + ".", ""
+
+
 # ============================================================================
 # HTTP
 # ============================================================================
@@ -944,12 +1080,28 @@ class Handler(BaseHTTPRequestHandler):
             base = str(body.get("path", ""))
             name = str(body.get("name", ""))
             include = body.get("include") or {}
+            step = export.clamp_step(body.get("step", export.FINAL_STEP))
             # Validate up front so a bad path is a message, not a failed job.
             try:
                 export.check_target(export.resolve_base(base), name, S.workdir)
             except export.ExportError as exc:
                 return self._error(str(exc), suggestion=exc.suggestion)
-            return self._start("saving", _job_export, base, name, include)
+            return self._start("saving", _job_export, base, name, include, step)
+
+        if route == "/api/delete":
+            # This one moves a file on disk, so insist on a JSON request. A
+            # page on another site can only send a JSON content type after a
+            # CORS preflight, which this server never answers, so it cannot
+            # reach this route by submitting a form at 127.0.0.1.
+            if "application/json" not in (self.headers.get("Content-Type") or "").lower():
+                return self._error("expected application/json", 415)
+            if S.progress()["running"]:
+                return self._error("Still working.", 409)
+            message, err = _delete(str(body.get("name", "")))
+            if err:
+                return self._error(err)
+            return self._json({"message": message, "files": _files_payload(),
+                               "funnel": _funnel_payload()})
 
         self._error("no such route", 404)
 

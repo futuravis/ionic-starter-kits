@@ -188,6 +188,14 @@ h1{font-size:29.5px;font-weight:600;letter-spacing:-.025em;margin:0}
 .swap:hover{border-color:var(--accent);color:var(--accent)}
 .swap.undo{color:var(--ink-faint)}
 .swap.undo:hover{border-color:var(--ink-soft);color:var(--ink-soft)}
+/* Delete: quiet until hovered, so it is not mistaken for the main action. */
+.del{margin-top:6px;width:100%;font-size:13px;font-weight:600;padding:5px 10px;border-radius:99px;border:1px solid transparent;background:none;color:var(--ink-faint);cursor:pointer}
+.del:hover{border-color:var(--major);color:var(--major);background:var(--major-soft)}
+.lb-side .del{margin-top:8px}
+/* Per-step export: the header button and its folded-away panel. */
+.export-top[hidden]{display:none}
+.export-top.on{border-color:var(--ink);color:var(--ink)}
+#exportSlot .params{margin-top:14px}
 
 /* ---------- bands ---------- */
 .bandrow{display:grid;grid-template-columns:22px 1fr 86px 210px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--rule)}

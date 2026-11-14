@@ -5,8 +5,8 @@ This is the only module that writes outside the session's working directory,
 so it is careful about three things:
 
 * **Nothing is ever overwritten.** If the target folder exists the export
-  refuses and offers the next free version name instead. That is the same
-  promise wedding_album makes with BestImages_v1, _v2, ...
+  refuses and offers the next free version name instead (Filter_v1, _v2, ...),
+  the same promise wedding_album makes with BestImages_v1, _v2, ...
 * **Names are sanitised.** A folder name cannot contain a path separator, so a
   typed "../../x" cannot place files anywhere but the chosen destination.
 * **The engine's selects and the user's own picks never merge.** Selects are
@@ -15,6 +15,9 @@ so it is careful about three things:
 
 Files are copied from the working directory, which holds the straightened
 copies, so a photo that came in sideways is delivered upright.
+
+An export can be taken at any step. It holds the photos still in the funnel
+after that step; the final step's export holds the selects.
 """
 
 from __future__ import annotations
@@ -28,14 +31,18 @@ import shutil
 from typing import Callable, Dict, List, Optional, Sequence
 
 from photo_shortlist import vertical
-from wedding_album import config, organizer
+from wedding_album import organizer
 
 from .engine import STEP_NAME, FunnelResult
 
 
 ProgressFn = Optional[Callable[[str, int, int], None]]
 
-PREFIX = config.OUTPUT_DIR_PREFIX        # "BestImages"
+# Default export folder name: Filter_v1, Filter_v2, ... inside the shoot.
+# photo_funnel's own folder scan skips these (see server._skip_dir), so a
+# second analysis of the same folder does not re-import an earlier export.
+PREFIX = "Filter"
+FINAL_STEP = 12
 MANUAL_DIR = "Manually_Selected"
 REJECTED_DIR = "Rejected"
 VERTICAL_DIR = "Vertical"
@@ -86,7 +93,7 @@ def sanitize(name: str) -> str:
 
 
 def next_version(base: str) -> str:
-    """The engine's own suggestion: the next free BestImages_vN in `base`."""
+    """The engine's own suggestion: the next free Filter_vN in `base`."""
     if os.path.isdir(base):
         return organizer.next_version_name(base, PREFIX)
     return f"{PREFIX}_v1"
@@ -174,27 +181,68 @@ def check_target(base: str, name: str, workdir: str) -> str:
 # WRITING
 # ============================================================================
 
-def _notes(result: FunnelResult, picks: Sequence[str]) -> str:
-    lines = ["Photo Funnel - selected photos", ""]
-    for i, name in enumerate(result.selects, 1):
+def clamp_step(step) -> int:
+    """A step number from user input, 1-12; anything unusable means the end."""
+    try:
+        n = int(step)
+    except (TypeError, ValueError):
+        return FINAL_STEP
+    return max(1, min(FINAL_STEP, n))
+
+
+def survivors(result: FunnelResult, step: int = FINAL_STEP) -> List[str]:
+    """
+    The photos still in the funnel after `step`, best first.
+
+    Steps 11 and 12 both end with the selects, in their pick order. Before
+    that, a photo is still in when no step up to and including `step` has
+    removed it. Unreadable files never had a state, so they are never in.
+    """
+    step = clamp_step(step)
+    if step >= 11:
+        return list(result.selects)
+    alive = [st for st in result.states.values()
+             if st.removed_by is None or st.removed_by > step]
+    return [st.name for st in sorted(alive, key=lambda s: s.rank)]
+
+
+def _numbered(i: int, total: int, name: str) -> str:
+    """01_name, or 001_name once there are more than 99."""
+    return f"{i:0{max(2, len(str(total)))}d}_{name}"
+
+
+def _notes(result: FunnelResult, picks: Sequence[str], step: int = FINAL_STEP) -> str:
+    step = clamp_step(step)
+    kept = survivors(result, step)
+    if step >= 11:
+        lines = ["Photo Funnel - selected photos", ""]
+    else:
+        lines = [f"Photo Funnel - the {len(kept)} photo(s) still in after step {step} "
+                 f"({STEP_NAME[step]})", ""]
+    for i, name in enumerate(kept, 1):
         st = result.states[name]
-        lines.append(f"{i:02d}_{name}   score {st.score * 100:.1f}   "
+        lines.append(f"{_numbered(i, len(kept), name)}   score {st.score * 100:.1f}   "
                      f"overall rank {st.rank} of {result.total}")
-        lines.append(f"      {st.faces if st.faces >= 0 else '?'} face(s), "
-                     f"{st.band} band, moment {st.group}")
+        lines.append(f"      {st.faces if st.faces >= 0 else '?'} face(s), {st.band} band"
+                     + (f", moment {st.group}" if st.group else ""))
         faults = [f.label for f in st.faults]
         lines.append("      " + ("faults: " + ", ".join(faults) if faults else "no faults found"))
         lines.append("")
     if picks:
+        kept_set = set(kept)
         lines.append(f"Manually selected ({len(picks)}) - your choices, not ranked by the funnel:")
         for name in picks:
             st = result.states.get(name)
-            why = f"removed at step {st.removed_by} ({STEP_NAME[st.removed_by]}): {st.reason}" \
-                if st and st.removed_by else "also a funnel select" if name in result.selects else ""
+            if st and st.removed_by and st.removed_by <= step:
+                why = f"removed at step {st.removed_by} ({STEP_NAME[st.removed_by]}): {st.reason}"
+            elif name in kept_set:
+                why = "also a funnel select" if step >= 11 else "also still in the funnel"
+            else:
+                why = ""
             lines.append(f"  {name}   {why}")
         lines.append("")
-    lines.append("Funnel")
-    for s in result.steps:
+    lines.append("Funnel" + ("" if step >= FINAL_STEP else f" (stopped after step {step})"))
+    for s in result.steps[:step]:
         lines.append(f"  {s.n:>2} {s.name:<12} {s.before:>4} -> {s.after:<4}"
                      + ("" if s.available else f"  ({s.note})"))
     return "\n".join(lines) + "\n"
@@ -217,13 +265,21 @@ def ranking_csv(result: FunnelResult, picks: Sequence[str]) -> str:
     return buf.getvalue()
 
 
-def plan(result: FunnelResult, picks: Sequence[str], include: Dict[str, bool]) -> List[tuple]:
-    """(source, relative destination) pairs, without writing anything."""
+def plan(result: FunnelResult, picks: Sequence[str], include: Dict[str, bool],
+         step: int = FINAL_STEP) -> List[tuple]:
+    """
+    (source, relative destination) pairs, without writing anything.
+
+    `step` is where the user stopped: the numbered photos are the ones still
+    in after it, and "rejected" means removed at or before it.
+    """
     inc = {**INCLUDE_DEFAULTS, **(include or {})}
+    step = clamp_step(step)
     out = []
     if inc["selects"]:
-        for i, name in enumerate(result.selects, 1):
-            out.append((result.states[name].record.path, f"{i:02d}_{name}"))
+        kept = survivors(result, step)
+        for i, name in enumerate(kept, 1):
+            out.append((result.states[name].record.path, _numbered(i, len(kept), name)))
     if inc["manual"]:
         for name in picks:
             st = result.states.get(name)
@@ -231,19 +287,21 @@ def plan(result: FunnelResult, picks: Sequence[str], include: Dict[str, bool]) -
                 out.append((st.record.path, os.path.join(MANUAL_DIR, name)))
     if inc["rejected"]:
         for st in result.states.values():
-            if st.removed_by:
+            if st.removed_by and st.removed_by <= step:
                 folder = f"{st.removed_by:02d}_{STEP_NAME[st.removed_by].replace(' ', '_')}"
                 out.append((st.record.path, os.path.join(REJECTED_DIR, folder, st.name)))
     return out
 
 
 def write(result: FunnelResult, picks: Sequence[str], base: str, name: str,
-          include: Dict[str, bool], workdir: str, progress: ProgressFn = None) -> dict:
+          include: Dict[str, bool], workdir: str, progress: ProgressFn = None,
+          step: int = FINAL_STEP) -> dict:
     """Write the export. Returns a summary; raises ExportError before touching disk."""
     inc = {**INCLUDE_DEFAULTS, **(include or {})}
+    step = clamp_step(step)
     target = check_target(resolve_base(base), name, workdir)
-    copies = plan(result, picks, inc)
-    verticals = result.selects if inc["vertical"] else []
+    copies = plan(result, picks, inc, step)
+    verticals = survivors(result, step) if inc["vertical"] else []
     total = len(copies) + len(verticals) + 2
 
     os.makedirs(target)
@@ -266,7 +324,7 @@ def write(result: FunnelResult, picks: Sequence[str], base: str, name: str,
     for i, sel in enumerate(verticals, 1):
         st = result.states[sel]
         stem = os.path.splitext(sel)[0]
-        dest = os.path.join(target, VERTICAL_DIR, f"{i:02d}_{stem}_9x16.jpg")
+        dest = os.path.join(target, VERTICAL_DIR, _numbered(i, len(verticals), f"{stem}_9x16.jpg"))
         faces = []
         if st.record.faces is not None and st.record.faces.ok:
             faces = sorted(st.record.faces.faces, key=lambda f: -f.size_ratio)
@@ -278,7 +336,7 @@ def write(result: FunnelResult, picks: Sequence[str], base: str, name: str,
 
     if inc["notes"]:
         with open(os.path.join(target, "why_these_photos.txt"), "w", encoding="utf-8") as fh:
-            fh.write(_notes(result, picks))
+            fh.write(_notes(result, picks, step))
     if inc["csv"]:
         with open(os.path.join(target, "ranking.csv"), "w", encoding="utf-8", newline="") as fh:
             fh.write(ranking_csv(result, picks))
@@ -286,7 +344,7 @@ def write(result: FunnelResult, picks: Sequence[str], base: str, name: str,
     tick("done")
 
     return {
-        "path": target, "pretty": pretty(target),
+        "path": target, "pretty": pretty(target), "step": step,
         "photos": len(copies), "verticals": len(verticals) - sum(1 for e in errors if e.startswith(VERTICAL_DIR)),
         "errors": errors,
     }
